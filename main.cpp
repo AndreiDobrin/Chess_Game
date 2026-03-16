@@ -32,18 +32,20 @@ struct Position {
         os << "(" << pos.row << ", " << pos.col << ")";
         return os;
     }
+    bool operator==(const Position& other) const {
+        return this->row == other.row && this->col == other.col;
+    }
 
 };
 
 class Piece {
     bool hasMoved; // for pawns' first move and for castling
     Color color;
-    Position position;
 
 public:
-    Piece(Color c, Position startPos) : color(c), position(startPos), hasMoved(false) {} // constructor cu parametri
-    Piece(Color c, Position startPos, bool hasMoved) : color(c), position(startPos), hasMoved(hasMoved) {} // constructor cu toti parametrii
-    Piece() : color(Color::WHITE), position(0,0), hasMoved(false) {} // constructor fara parametri
+    Piece(Color c) : color(c), hasMoved(false) {} // constructor cu parametri
+    Piece(Color c, bool hasMoved) : color(c), hasMoved(hasMoved) {} // constructor cu toti parametrii
+    Piece() : color(Color::WHITE), hasMoved(false) {} // constructor fara parametri
 
     ~Piece() = default;
 
@@ -52,7 +54,6 @@ public:
 
         this->hasMoved = other.hasMoved;
         this->color = other.color;
-        this->position = other.position;
 
         return *this;
     }
@@ -97,7 +98,7 @@ public:
         }
         return is;
     }
-
+/*
     int operator[](int index) const { // supraincarcare operator '[]'
         if (index == 0) {
             return this->getPosition().row;
@@ -109,8 +110,8 @@ public:
             throw std::out_of_range("Index must be 0 (row) or 1 (col)");
         }
     }
-
-    virtual vector<Position> getValidMoves(Board& board) = 0;
+*/
+    virtual vector<Position> getValidMoves(Board& board, Position pos) = 0;
     virtual void printPiece() = 0;
 
     /*
@@ -132,9 +133,11 @@ public:
     Color getColor() const {
         return color;
     }
+    /*
     Position getPosition() const {
         return position;
     }
+    */
     bool getHasMoved() const {
         return hasMoved;
     }
@@ -142,7 +145,7 @@ public:
 
 class Pawn : public Piece {
 public:
-    Pawn(Color c, Position startPos) : Piece(c, startPos) {}
+    Pawn(Color c) : Piece(c) {}
 
     virtual void printPiece() {
         if (this->getColor() == Color::WHITE)
@@ -152,7 +155,7 @@ public:
         }
     }
 
-    vector<Position> getValidMoves(Board& board);
+    vector<Position> getValidMoves(Board& board, Position pos);
 };
 
 class Board {
@@ -166,13 +169,19 @@ public:
 
     void setupBoard() {
             for (int j = 0; j < 8; j++) {
-                grid[1][j] = make_unique<Pawn>(Color::BLACK, Position{1,j});
-                grid[6][j] = make_unique<Pawn>(Color::WHITE, Position{6,j});
+                grid[1][j] = make_unique<Pawn>(Color::BLACK);
+                grid[6][j] = make_unique<Pawn>(Color::WHITE);
             }
     }
 
     void showChessboard() {
+        cout << "     ";
+        for (int j = 0; j < 8; j++) {
+            cout << char('A' + j) << "      ";
+        }
+        cout << endl;
         for (int i = 0; i < 8; i++) {
+            cout << i+1 << "  ";
             for (int j = 0; j < 8; j++) {
                 if (grid[i][j] == nullptr)
                     cout << "[    ] ";
@@ -184,27 +193,16 @@ public:
         }
     }
 
-    void movePiece(Position from, Position to) {
-        if (grid[from.row][from.col] == nullptr) {
-            cout << "Invalid move: No piece at the starting square!" << endl;
-            return;
-        }
-
-        grid[to.row][to.col] = std::move(grid[from.row][from.col]);
-        grid[to.row][to.col]->setPosition(to);
-        grid[to.row][to.col]->setHasMoved(true);
-    }
-
     Piece* getPositionInfo(Position pos) {
-        return grid[pos.row][pos.col].get(); // returneaza adresa din interiorul smart pointer-ului
+        return this->grid[pos.row][pos.col].get(); // returneaza adresa din interiorul smart pointer-ului
     }
-
+    bool movePiece(Position from, Position to, Color currentTurn);
 };
 
-vector<Position> Pawn::getValidMoves(Board& board) {
+vector<Position> Pawn::getValidMoves(Board& board, Position pos) {
     vector<Position> validMoves;
-    int r = this->getPosition().row;
-    int c = this->getPosition().col;
+    int r = pos.row;
+    int c = pos.col;
     int moveOrientation = 1;
     if (this->getColor() == Color::WHITE) {
         moveOrientation = -1;
@@ -236,18 +234,93 @@ vector<Position> Pawn::getValidMoves(Board& board) {
     return validMoves;
 }
 
+bool Board::movePiece(Position from, Position to, Color currentTurn) {
+    if (this->getPositionInfo(from) == nullptr) {
+        cout << "Invalid move: No piece at "<< from << endl;
+        return false;
+    }
+    if (this->getPositionInfo(from)->getColor() != currentTurn) {
+        cout << "Invalid move: Not your piece \n";
+        return false;
+    }
+    vector<Position> validMoves = this->getPositionInfo(from)->getValidMoves(*this, from);
+    for (Position move : validMoves) {
+        cout << move << " ";
+    }
+    cout << endl;
+    bool ok = false;
+    for (Position move : validMoves) {
+        if (to == move) {
+            ok = true;
+            break;
+        }
+    }
+    if (ok) {
+        this->grid[to.row][to.col] = std::move(this->grid[from.row][from.col]);
+        //grid[to.row][to.col]->setPosition(to);
+        this->grid[to.row][to.col]->setHasMoved(true);
+        return true;
+    }
+    cout << "Invalid move\n";
+    return false;
+
+}
+
+class gameEngine {
+    Color currentTurn;
+public:
+    gameEngine() {
+        currentTurn = Color::WHITE;
+    }
+
+    ~gameEngine() = default;
+
+    void playerMove(Board& board) {
+        string wantedMoveFrom, wantedMoveTo;
+        cin >> wantedMoveFrom;
+        cin >> wantedMoveTo;
+        Position from = {wantedMoveFrom[1] - '1', wantedMoveFrom[0] - 'A'};
+        Position to = {wantedMoveTo[1] - '1', wantedMoveTo[0] - 'A'};
+        cout << "Wanted Move: From "<< from << " to " << to << "\n";
+
+        if (board.movePiece(from, to, currentTurn)) {
+            if (currentTurn == Color::WHITE) {
+                currentTurn = Color::BLACK;
+            }
+            else {
+                currentTurn = Color::WHITE;
+            }
+        }
+    }
+
+    Color getCurrentTurn() {
+        return currentTurn;
+    }
+
+
+};
+
 int main() {
     Board chessboard;
+    gameEngine Engine;
     Piece* targetPiece = chessboard.getPositionInfo({1,1});
     Piece* targetPiece1 = chessboard.getPositionInfo({6,1});
-    chessboard.movePiece({6,1}, {2, 0});
+    //chessboard.movePiece({6,1}, {2, 0});
     chessboard.showChessboard();
-
+/*
     if (targetPiece != nullptr) {
         vector<Position> moves = targetPiece->getValidMoves(chessboard);
         for (Position move : moves) {
             cout << move << " ";
         }
+    }
+*/
+    cout << endl;
+    Engine.playerMove(chessboard);
+    chessboard.showChessboard();
+    while (true) {
+        Engine.playerMove(chessboard);
+        chessboard.showChessboard();
     }
 
     return 0;
