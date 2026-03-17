@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <typeinfo>
 class Board;
 using namespace std;
 
@@ -14,7 +15,7 @@ enum class Color {
                 os << "White";
                 break;
             case Color::BLACK:
-                os<< "Black";
+                os << "Black";
                 break;
             default:
                 os << "Unknown";
@@ -46,6 +47,7 @@ public:
     Piece(Color c) : color(c), hasMoved(false) {} // constructor cu parametri
     Piece(Color c, bool hasMoved) : color(c), hasMoved(hasMoved) {} // constructor cu toti parametrii
     Piece() : color(Color::WHITE), hasMoved(false) {} // constructor fara parametri
+    Piece(Piece &other) = default;
 
     ~Piece() = default;
 
@@ -112,6 +114,7 @@ public:
     }
 */
     virtual vector<Position> getValidMoves(Board& board, Position pos) = 0;
+    virtual string identifyPiece(Board& board, Position pos) = 0;
     virtual void printPiece() = 0;
 
     /*
@@ -143,6 +146,24 @@ public:
     }
 };
 
+class King : public Piece {
+public:
+    King(Color c) : Piece(c) {}
+
+    virtual void printPiece() {
+        if (this->getColor() == Color::WHITE)
+            cout << "[ wK ] ";
+        else {
+            cout << "[ bK ] ";
+        }
+    }
+
+    vector<Position> getValidMoves(Board& board, Position pos);
+    string identifyPiece(Board& board, Position pos) {
+        return "King";
+    };
+};
+
 class Pawn : public Piece {
 public:
     Pawn(Color c) : Piece(c) {}
@@ -156,6 +177,9 @@ public:
     }
 
     vector<Position> getValidMoves(Board& board, Position pos);
+    string identifyPiece(Board& board, Position pos) {
+        return "Pawn";
+    };
 };
 
 class Board {
@@ -172,6 +196,8 @@ public:
                 grid[1][j] = make_unique<Pawn>(Color::BLACK);
                 grid[6][j] = make_unique<Pawn>(Color::WHITE);
             }
+        grid[0][4] = make_unique<King>(Color::BLACK);
+        grid[7][4] = make_unique<King>(Color::WHITE);
     }
 
     void showChessboard() {
@@ -197,18 +223,56 @@ public:
         return this->grid[pos.row][pos.col].get(); // returneaza adresa din interiorul smart pointer-ului
     }
     bool movePiece(Position from, Position to, Color currentTurn);
+
+    bool isKingInCheck(Color currentTurn) {
+        Position kingPos;
+        // cautam regele
+        bool kingFound = false;
+        for (int i = 0; i <= 7; i++) {
+            for (int j = 0; j <= 7; j++) {
+                Piece* selectedPiece = this->getPositionInfo({i,j});
+                if (selectedPiece != nullptr && selectedPiece->identifyPiece(*this, {i,j}) == "King"
+                && selectedPiece->getColor() == currentTurn) {
+                    kingPos = {i,j};
+                    kingFound = true;
+                    break;
+                }
+            }
+            if (kingFound) {
+                break;
+            }
+        }
+
+        for (int i = 0 ; i <= 7; i++) {
+            for (int j = 0; j <= 7; j++) {
+                Piece* selectedPiece = this->getPositionInfo({i,j});
+                if (selectedPiece != nullptr && selectedPiece->getColor() != currentTurn) {
+                    vector<Position> validMoves = this->getPositionInfo({i,j})->getValidMoves(*this,{i,j});
+                    for (Position move : validMoves) {
+                        if (move == kingPos) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
 };
 
 vector<Position> Pawn::getValidMoves(Board& board, Position pos) {
     vector<Position> validMoves;
     int r = pos.row;
     int c = pos.col;
+    Color pieceColor = board.getPositionInfo(pos)->getColor();
     int moveOrientation = 1;
     if (this->getColor() == Color::WHITE) {
         moveOrientation = -1;
     }
     // are liber in fata un spatiu
-    if (r + moveOrientation >= 0 && r + moveOrientation <= 7 && board.getPositionInfo({r + moveOrientation, c}) == nullptr) {
+    if (r + moveOrientation >= 0 && r + moveOrientation <= 7 &&
+    board.getPositionInfo({r + moveOrientation, c}) == nullptr) {
         validMoves.push_back({r + moveOrientation, c});
     }
     // are liber in fata doua spatii ( + nu s-a miscat)
@@ -219,18 +283,35 @@ vector<Position> Pawn::getValidMoves(Board& board, Position pos) {
         validMoves.push_back({r + moveOrientation * 2, c});
     }
 
-    // are piesa pe diagonala stanga
+    // are piesa pe diagonala stanga SI ARE CULOARE DIFERITA
     if (r + moveOrientation >= 0 && r + moveOrientation <= 7 && c - 1 >= 0 &&
-    board.getPositionInfo({r + moveOrientation, c - 1}) != nullptr) {
+    board.getPositionInfo({r + moveOrientation, c - 1}) != nullptr &&
+    board.getPositionInfo({r + moveOrientation, c - 1})->getColor() != pieceColor) {
         validMoves.push_back({r + moveOrientation, c - 1});
     }
 
-    // are piesa pe diagonala dreapta
+    // are piesa pe diagonala dreapta SI ARE CULOARE DIFERITA
     if (r + moveOrientation >= 0 && r + moveOrientation <= 7 && c + 1 >= 0 &&
-    board.getPositionInfo({r + moveOrientation, c + 1}) != nullptr) {
+    board.getPositionInfo({r + moveOrientation, c + 1}) != nullptr &&
+    board.getPositionInfo({r + moveOrientation, c + 1})->getColor() != pieceColor) {
         validMoves.push_back({r + moveOrientation, c + 1});
     }
 
+    return validMoves;
+}
+
+vector<Position> King::getValidMoves(Board& board, Position pos) {
+    vector<Position> validMoves;
+    // int r = pos.row;
+    // int c = pos.col;
+    Color pieceColor = board.getPositionInfo(pos)->getColor();
+
+    for (int i = pos.row - 1; i <= pos.row + 1; i++) {
+        for (int j = pos.col - 1; j <= pos.col + 1; j++) {
+            if (i >= 0 && i <= 7 && (board.getPositionInfo({i,j}) == nullptr || board.getPositionInfo({i,j})->getColor() != pieceColor))
+                validMoves.push_back({i,j});
+        }
+    }
     return validMoves;
 }
 
@@ -240,12 +321,25 @@ bool Board::movePiece(Position from, Position to, Color currentTurn) {
         return false;
     }
     if (this->getPositionInfo(from)->getColor() != currentTurn) {
-        cout << "Invalid move: Not your piece \n";
+        cout << "Invalid move: Not your piece\n";
         return false;
     }
     vector<Position> validMoves = this->getPositionInfo(from)->getValidMoves(*this, from);
-    for (Position move : validMoves) {
-        cout << move << " ";
+    for (int i = 0; i < validMoves.size(); i++) {
+        unique_ptr<Piece> capturedCopy = std::move(this->grid[validMoves[i].row][validMoves[i].col]);
+        grid[to.row][to.col] = std::move(this->grid[from.row][from.col]);
+        if (this->isKingInCheck(currentTurn)) {
+            grid[from.row][from.col] = std::move(this->grid[to.row][to.col]);
+            this->grid[validMoves[i].row][validMoves[i].col] = std::move(capturedCopy);
+            validMoves.erase(validMoves.begin() + i);
+            cout << "Invalid move: King is checked after this move\n";
+            return false;
+        }
+        else {
+            grid[from.row][from.col] = std::move(this->grid[to.row][to.col]);
+            this->grid[validMoves[i].row][validMoves[i].col] = std::move(capturedCopy);
+        }
+
     }
     cout << endl;
     bool ok = false;
@@ -303,7 +397,8 @@ public:
 int main() {
     Board chessboard;
     gameEngine Engine;
-    Piece* targetPiece = chessboard.getPositionInfo({1,1});
+    Piece* targetPiece = chessboard.getPositionInfo({0,4});
+    cout << typeid(targetPiece).name() << endl;
     Piece* targetPiece1 = chessboard.getPositionInfo({6,1});
     //chessboard.movePiece({6,1}, {2, 0});
     chessboard.showChessboard();
@@ -321,6 +416,8 @@ int main() {
     while (true) {
         Engine.playerMove(chessboard);
         chessboard.showChessboard();
+        if (chessboard.isKingInCheck(Engine.getCurrentTurn()))
+            cout << Engine.getCurrentTurn() << " is checked\n";
     }
 
     return 0;
