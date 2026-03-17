@@ -113,6 +113,8 @@ public:
         }
     }
 */
+
+
     virtual vector<Position> getValidMoves(Board& board, Position pos) = 0;
     virtual string identifyPiece(Board& board, Position pos) = 0;
     virtual void printPiece() = 0;
@@ -157,7 +159,7 @@ public:
             cout << "[ bK ] ";
         }
     }
-
+    vector<Position> getLegalMoves(Board& board, vector<Position> validMoves, Position pos);
     vector<Position> getValidMoves(Board& board, Position pos);
     string identifyPiece(Board& board, Position pos) {
         return "King";
@@ -222,7 +224,7 @@ public:
     Piece* getPositionInfo(Position pos) {
         return this->grid[pos.row][pos.col].get(); // returneaza adresa din interiorul smart pointer-ului
     }
-    bool movePiece(Position from, Position to, Color currentTurn);
+//    bool movePiece(Position from, Position to, Color currentTurn);
 
     bool isKingInCheck(Color currentTurn) {
         Position kingPos;
@@ -242,6 +244,10 @@ public:
                 break;
             }
         }
+        if (!kingFound) {
+            cout << "CRITICAL ERROR: King is missing from the board!" << endl;
+            return false;
+        }
 
         for (int i = 0 ; i <= 7; i++) {
             for (int j = 0; j <= 7; j++) {
@@ -259,7 +265,98 @@ public:
         return false;
     }
 
+    // bool isCheckmate(Color currentTurn) {
+    //
+    //     for (int i = 0; i < 7; i++) {
+    //         for (int j = 0; j < 7; j++) {
+    //             if (grid[i][j] != nullptr && grid[i][j]->getColor() == currentTurn) {
+    //                 vector<Position> validMoves = grid[i][j]->getValidMoves(*this, {i,j});
+    //             }
+    //         }
+    //     }
+    //
+    //     for (int i = 0; i < validMoves.size(); i++) {
+    //         unique_ptr<Piece> capturedCopy = std::move(this->grid[validMoves[i].row][validMoves[i].col]);
+    //         grid[to.row][to.col] = std::move(this->grid[from.row][from.col]);
+    //         if (this->isKingInCheck(currentTurn)) {
+    //             grid[from.row][from.col] = std::move(this->grid[to.row][to.col]);
+    //             this->grid[validMoves[i].row][validMoves[i].col] = std::move(capturedCopy);
+    //             validMoves.erase(validMoves.begin() + i);
+    //             cout << "Invalid move: King is checked after this move\n";
+    //             return false;
+    //         } else {
+    //             grid[from.row][from.col] = std::move(this->grid[to.row][to.col]);
+    //             this->grid[validMoves[i].row][validMoves[i].col] = std::move(capturedCopy);
+    //         }
+    //     }
+    // }
+
+
+
+
+
+bool movePiece(Position from, Position to, Color currentTurn) {
+    if (this->getPositionInfo(from) == nullptr) {
+        cout << "Invalid move: No piece at "<< from << endl;
+        return false;
+    }
+    if (this->getPositionInfo(from)->getColor() != currentTurn) {
+        cout << "Invalid move: Not your piece\n";
+        return false;
+    }
+    vector<Position> validMoves = this->getPositionInfo(from)->getValidMoves(*this, from);
+    bool ok = false;
+    for (Position move : validMoves) {
+        if (to == move) {
+            if (!isCheckedAfterMove(from, to, currentTurn)) {
+                ok = true;
+            }
+            break;
+        }
+    }
+    if (ok) {
+        this->grid[to.row][to.col] = std::move(this->grid[from.row][from.col]);
+        //grid[to.row][to.col]->setPosition(to);
+        this->grid[to.row][to.col]->setHasMoved(true);
+        return true;
+    }
+    cout << "Invalid move\n";
+    return false;
+
+}
+
+bool isCheckedAfterMove(Position from, Position to, Color currentTurn) {
+        bool inCheck = false;
+        unique_ptr<Piece> capturedCopy = std::move(this->grid[to.row][to.col]);
+        grid[to.row][to.col] = std::move(this->grid[from.row][from.col]);
+        if (this->isKingInCheck(currentTurn)) {
+            // validMoves.erase(validMoves.begin() + i);
+            cout << "Invalid move: King is checked after this move\n";
+            inCheck = true;
+        }
+        grid[from.row][from.col] = std::move(this->grid[to.row][to.col]);
+        this->grid[to.row][to.col] = std::move(capturedCopy);
+        return inCheck;
+    }
 };
+
+vector<Position> King::getValidMoves(Board& board, Position pos) {
+    vector<Position> validMoves;
+    // int r = pos.row;
+    // int c = pos.col;
+    Color pieceColor = board.getPositionInfo(pos)->getColor();
+
+    for (int i = pos.row - 1; i <= pos.row + 1; i++) {
+        for (int j = pos.col - 1; j <= pos.col + 1; j++) {
+            if (i >= 0 && i <= 7 && j >= 0 && j <= 7 &&
+            (board.getPositionInfo({i,j}) == nullptr ||
+            board.getPositionInfo({i,j})->getColor() != pieceColor))
+                validMoves.push_back({i,j});
+        }
+    }
+    return validMoves;
+}
+
 
 vector<Position> Pawn::getValidMoves(Board& board, Position pos) {
     vector<Position> validMoves;
@@ -278,8 +375,8 @@ vector<Position> Pawn::getValidMoves(Board& board, Position pos) {
     // are liber in fata doua spatii ( + nu s-a miscat)
     if (!this->getHasMoved() && r + moveOrientation * 2 >= 0 && r + moveOrientation * 2 <= 7 &&
     board.getPositionInfo({r + moveOrientation, c}) == nullptr && // primul spatiu
-    board.getPositionInfo({r + moveOrientation * 2, c}) == nullptr) { // al doilea spatiu
-
+    board.getPositionInfo({r + moveOrientation * 2, c}) == nullptr) // al doilea spatiu
+    {
         validMoves.push_back({r + moveOrientation * 2, c});
     }
 
@@ -300,65 +397,7 @@ vector<Position> Pawn::getValidMoves(Board& board, Position pos) {
     return validMoves;
 }
 
-vector<Position> King::getValidMoves(Board& board, Position pos) {
-    vector<Position> validMoves;
-    // int r = pos.row;
-    // int c = pos.col;
-    Color pieceColor = board.getPositionInfo(pos)->getColor();
 
-    for (int i = pos.row - 1; i <= pos.row + 1; i++) {
-        for (int j = pos.col - 1; j <= pos.col + 1; j++) {
-            if (i >= 0 && i <= 7 && (board.getPositionInfo({i,j}) == nullptr || board.getPositionInfo({i,j})->getColor() != pieceColor))
-                validMoves.push_back({i,j});
-        }
-    }
-    return validMoves;
-}
-
-bool Board::movePiece(Position from, Position to, Color currentTurn) {
-    if (this->getPositionInfo(from) == nullptr) {
-        cout << "Invalid move: No piece at "<< from << endl;
-        return false;
-    }
-    if (this->getPositionInfo(from)->getColor() != currentTurn) {
-        cout << "Invalid move: Not your piece\n";
-        return false;
-    }
-    vector<Position> validMoves = this->getPositionInfo(from)->getValidMoves(*this, from);
-    for (int i = 0; i < validMoves.size(); i++) {
-        unique_ptr<Piece> capturedCopy = std::move(this->grid[validMoves[i].row][validMoves[i].col]);
-        grid[to.row][to.col] = std::move(this->grid[from.row][from.col]);
-        if (this->isKingInCheck(currentTurn)) {
-            grid[from.row][from.col] = std::move(this->grid[to.row][to.col]);
-            this->grid[validMoves[i].row][validMoves[i].col] = std::move(capturedCopy);
-            validMoves.erase(validMoves.begin() + i);
-            cout << "Invalid move: King is checked after this move\n";
-            return false;
-        }
-        else {
-            grid[from.row][from.col] = std::move(this->grid[to.row][to.col]);
-            this->grid[validMoves[i].row][validMoves[i].col] = std::move(capturedCopy);
-        }
-
-    }
-    cout << endl;
-    bool ok = false;
-    for (Position move : validMoves) {
-        if (to == move) {
-            ok = true;
-            break;
-        }
-    }
-    if (ok) {
-        this->grid[to.row][to.col] = std::move(this->grid[from.row][from.col]);
-        //grid[to.row][to.col]->setPosition(to);
-        this->grid[to.row][to.col]->setHasMoved(true);
-        return true;
-    }
-    cout << "Invalid move\n";
-    return false;
-
-}
 
 class gameEngine {
     Color currentTurn;
