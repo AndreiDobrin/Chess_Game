@@ -166,6 +166,23 @@ public:
     };
 };
 
+class Rook : public Piece {
+public:
+    Rook(Color c) : Piece(c) {}
+
+    virtual void printPiece() {
+        if (this-> getColor() == Color::WHITE)
+            cout << "[ wR ] ";
+        else {
+            cout << "[ bR ] ";
+        }
+    }
+    vector<Position> getValidMoves(Board& board, Position pos);
+    string identifyPiece(Board& board, Position pos) {
+        return "Pawn";
+    }
+};
+
 class Pawn : public Piece {
 public:
     Pawn(Color c) : Piece(c) {}
@@ -181,7 +198,7 @@ public:
     vector<Position> getValidMoves(Board& board, Position pos);
     string identifyPiece(Board& board, Position pos) {
         return "Pawn";
-    };
+    }
 };
 
 class Board {
@@ -200,6 +217,11 @@ public:
             }
         grid[0][4] = make_unique<King>(Color::BLACK);
         grid[7][4] = make_unique<King>(Color::WHITE);
+        grid[0][0] = make_unique<Rook>(Color::BLACK);
+        grid[0][7] = make_unique<Rook>(Color::BLACK);
+        grid[7][0] = make_unique<Rook>(Color::WHITE);
+        grid[7][7] = make_unique<Rook>(Color::WHITE);
+
     }
 
     void showChessboard() {
@@ -265,31 +287,31 @@ public:
         return false;
     }
 
-    // bool isCheckmate(Color currentTurn) {
-    //
-    //     for (int i = 0; i < 7; i++) {
-    //         for (int j = 0; j < 7; j++) {
-    //             if (grid[i][j] != nullptr && grid[i][j]->getColor() == currentTurn) {
-    //                 vector<Position> validMoves = grid[i][j]->getValidMoves(*this, {i,j});
-    //             }
-    //         }
-    //     }
-    //
-    //     for (int i = 0; i < validMoves.size(); i++) {
-    //         unique_ptr<Piece> capturedCopy = std::move(this->grid[validMoves[i].row][validMoves[i].col]);
-    //         grid[to.row][to.col] = std::move(this->grid[from.row][from.col]);
-    //         if (this->isKingInCheck(currentTurn)) {
-    //             grid[from.row][from.col] = std::move(this->grid[to.row][to.col]);
-    //             this->grid[validMoves[i].row][validMoves[i].col] = std::move(capturedCopy);
-    //             validMoves.erase(validMoves.begin() + i);
-    //             cout << "Invalid move: King is checked after this move\n";
-    //             return false;
-    //         } else {
-    //             grid[from.row][from.col] = std::move(this->grid[to.row][to.col]);
-    //             this->grid[validMoves[i].row][validMoves[i].col] = std::move(capturedCopy);
-    //         }
-    //     }
-    // }
+    vector<Position> getStrictlyValidMoves(Position from) {
+        vector<Position> strictlyValidMoves;
+        Piece* targetPiece = this->getPositionInfo(from);
+        if (targetPiece == nullptr) return strictlyValidMoves;
+
+        vector<Position> validMoves = targetPiece->getValidMoves(*this, from);
+        for (Position move : validMoves) {
+                if (!isCheckedAfterMove(from, move, targetPiece->getColor())) {
+                    strictlyValidMoves.push_back(move);
+            }
+        }
+        return strictlyValidMoves;
+    }
+
+    bool isCheckmate(Color currentTurn) {
+        for (int i = 0; i < 7; i++) {
+            for (int j = 0; j < 7; j++) {
+                if (grid[i][j] != nullptr && grid[i][j]->getColor() == currentTurn) {
+                    if (!getStrictlyValidMoves({i,j}).empty())
+                        return false;
+                }
+            }
+        }
+        return true;
+    }
 
 
 
@@ -353,6 +375,61 @@ vector<Position> King::getValidMoves(Board& board, Position pos) {
             board.getPositionInfo({i,j})->getColor() != pieceColor))
                 validMoves.push_back({i,j});
         }
+    }
+    return validMoves;
+}
+
+vector<Position> Rook::getValidMoves(Board& board, Position pos) {
+    vector<Position> validMoves;
+    //nord
+    int r = pos.row - 1;
+    int c = pos.col;
+    while (r >= 0) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r --;
+    }
+    //sud
+    r = pos.row + 1;
+    while (r <= 7) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r ++;
+    }
+    //est
+    r = pos.row;
+    c = pos.col - 1;
+    while (c >= 0) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        c --;
+    }
+    //vest
+    c = pos.col + 1;
+    while (c <= 7) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        c ++;
     }
     return validMoves;
 }
@@ -455,8 +532,23 @@ int main() {
     while (true) {
         Engine.playerMove(chessboard);
         chessboard.showChessboard();
-        if (chessboard.isKingInCheck(Engine.getCurrentTurn()))
+        if (chessboard.isKingInCheck(Engine.getCurrentTurn())) {
             cout << Engine.getCurrentTurn() << " is checked\n";
+            if (chessboard.isCheckmate(Engine.getCurrentTurn())) {
+                if (Engine.getCurrentTurn() == Color::WHITE)
+                    cout << "BLACK WINS!!!";
+                else
+                    cout << "WHITE WINS!!!";
+                break;
+            }
+
+        }
+        else {
+            if (chessboard.isCheckmate(Engine.getCurrentTurn())) {
+                cout << "DRAW";
+                break;
+            }
+        }
     }
 
     return 0;
