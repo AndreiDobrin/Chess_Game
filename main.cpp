@@ -179,7 +179,7 @@ public:
     }
     vector<Position> getValidMoves(Board& board, Position pos);
     string identifyPiece(Board& board, Position pos) {
-        return "Pawn";
+        return "Rook";
     }
 };
 
@@ -326,13 +326,12 @@ bool movePiece(Position from, Position to, Color currentTurn) {
         cout << "Invalid move: Not your piece\n";
         return false;
     }
-    vector<Position> validMoves = this->getPositionInfo(from)->getValidMoves(*this, from);
+    vector<Position> legalMoves = this->getStrictlyValidMoves(from);
+
     bool ok = false;
-    for (Position move : validMoves) {
+    for (Position move : legalMoves) {
         if (to == move) {
-            if (!isCheckedAfterMove(from, to, currentTurn)) {
-                ok = true;
-            }
+            ok = true;
             break;
         }
     }
@@ -353,7 +352,7 @@ bool isCheckedAfterMove(Position from, Position to, Color currentTurn) {
         grid[to.row][to.col] = std::move(this->grid[from.row][from.col]);
         if (this->isKingInCheck(currentTurn)) {
             // validMoves.erase(validMoves.begin() + i);
-            cout << "Invalid move: King is checked after this move\n";
+            //cout << "Invalid move: King is checked after this move\n";
             inCheck = true;
         }
         grid[from.row][from.col] = std::move(this->grid[to.row][to.col]);
