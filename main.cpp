@@ -2,6 +2,9 @@
 #include <vector>
 #include <memory>
 #include <typeinfo>
+#include <chrono>
+#include <string>
+#include <tuple>
 class Board;
 using namespace std;
 
@@ -364,8 +367,8 @@ public:
     }
 
     bool isCheckmate(Color currentTurn) {
-        for (int i = 0; i < 7; i++) {
-            for (int j = 0; j < 7; j++) {
+        for (int i = 0; i <= 7; i++) {
+            for (int j = 0; j <= 7; j++) {
                 if (grid[i][j] != nullptr && grid[i][j]->getColor() == currentTurn) {
                     if (!getStrictlyValidMoves({i,j}).empty())
                         return false;
@@ -829,26 +832,73 @@ vector<Position> Knight::getValidMoves(Board &board, Position pos) {
 
 class gameEngine {
     Color currentTurn;
+    // piesa mutata; captureaza piesa?; from; to.
+    vector<tuple<char, bool, Position, Position>> moveHistory;
+    float* moveDurations;
+    int movesCapacity;
+
+    void expandCapacity() {
+        int newCapacity = movesCapacity * 2;
+        float* newMoveDurations = new float[newCapacity];
+
+        for (int i = 0; i < movesCapacity; i++) {
+            newMoveDurations[i] = moveDurations[i];
+        }
+
+        delete[] moveDurations;
+        movesCapacity = newCapacity;
+        moveDurations = newMoveDurations;
+        cout << "Array size expanded to " << movesCapacity << endl;
+    }
 public:
     gameEngine() {
         currentTurn = Color::WHITE;
+        movesCapacity = 10;
+        moveDurations = new float[movesCapacity];
     }
 
-    ~gameEngine() = default;
+    ~gameEngine() {
+        delete[] moveDurations;
+    };
+    gameEngine(gameEngine &other) {
+        this->currentTurn = other.currentTurn;
+        this->moveHistory = other.moveHistory;
+        this->movesCapacity = other.movesCapacity;
+        this->moveDurations = new float[this->movesCapacity];
+
+        for (int i = 0; i < this->movesCapacity; i++) {
+            this->moveDurations[i] = other.moveDurations[i];
+        }
+    }
 
     void playerMove(Board& board) {
+        auto startTime = std::chrono::steady_clock::now();
         string wantedMoveFrom, wantedMoveTo;
         cin >> wantedMoveFrom;
         cin >> wantedMoveTo;
-        Position from = {wantedMoveFrom[1] - '1', wantedMoveFrom[0] - 'A'};
-        Position to = {wantedMoveTo[1] - '1', wantedMoveTo[0] - 'A'};
+        Position from = {wantedMoveFrom[1] - '1', toupper(wantedMoveFrom[0]) - 'A'};
+        Position to = {wantedMoveTo[1] - '1', toupper(wantedMoveTo[0]) - 'A'};
         cout << "Wanted Move: From "<< from << " to " << to << "\n";
+        if (board.getPositionInfo(from) == nullptr) {
+            cout << "No piece selected\n";
+            return;
+        }
+        bool toHasEnemyPiece = board.getPositionInfo(to) != nullptr && board.getPositionInfo(to)->getColor() != currentTurn;
+
+        char fromPiece = board.getPositionInfo(from)->identifyPiece(board, from)[0];
 
         if (board.movePiece(from, to, currentTurn)) {
+            auto endTime = chrono::steady_clock::now();
+            moveHistory.push_back(make_tuple(fromPiece, toHasEnemyPiece, from,to));
+            if (moveHistory.size() >= movesCapacity) {
+                expandCapacity();
+            }
+            moveDurations[moveHistory.size() - 1] = chrono::duration<float>(endTime - startTime).count();
             if (currentTurn == Color::WHITE) {
                 currentTurn = Color::BLACK;
             }
             else {
+
                 currentTurn = Color::WHITE;
             }
         }
@@ -857,9 +907,41 @@ public:
     Color getCurrentTurn() {
         return currentTurn;
     }
+    vector<tuple<char, bool, Position, Position>> getMoveHistory() {
+        return moveHistory;
+    }
+    float* getMoveDuration() {
+        return moveDurations;
+    }
+    int getMoveHistorySize() {
+        return moveHistory.size();
+    }
+
 
 
 };
+
+std::ostream& operator<< (std::ostream& os, const vector<tuple<char, bool, Position, Position>>& moveHistory) { // supraincarcare << pentru moveHistory
+    for (int i = 0; i < moveHistory.size(); i++) {
+        os << i + 1 << ".: ";// << get<0>(moveHistory[i]);
+        if (get<0>(moveHistory[i]) != 'P')
+            cout << get<0>(moveHistory[i]);
+        if (get<1>(moveHistory[i]))
+            os << 'x';
+        os << char(tolower(char(get<3>(moveHistory[i]).col + 'A'))) << get<3>(moveHistory[i]).row + 1 << "\n";
+    }
+    return os;
+}
+
+std::ostream& operator<< (std::ostream& os, const tuple<char, bool, Position, Position>& moveHistory) { // supraincarcare << pentru moveHistory
+        if (get<0>(moveHistory) != 'P')
+            cout << get<0>(moveHistory);
+        if (get<1>(moveHistory))
+            os << 'x';
+        os << char(tolower(char(get<3>(moveHistory).col + 'A'))) << get<3>(moveHistory).row + 1;
+    return os;
+}
+
 
 int main() {
     Board chessboard;
@@ -878,10 +960,18 @@ int main() {
     }
 */
     cout << endl;
-    Engine.playerMove(chessboard);
-    chessboard.showChessboard();
     while (true) {
         Engine.playerMove(chessboard);
+        auto history = Engine.getMoveHistory();
+        float* durations = Engine.getMoveDuration();
+
+        for (int i = 0; i < history.size(); i++) {
+            cout << "Move #" << i + 1 << ": "
+                 << history[i]
+                 << " | Duration: " << durations[i] << "s" << endl;
+        }
+        // cout << Engine.getMoveHistory();
+        // cout << Engine.getMoveDuration() << endl;
         chessboard.showChessboard();
         if (chessboard.isKingInCheck(Engine.getCurrentTurn())) {
             cout << Engine.getCurrentTurn() << " is checked\n";
