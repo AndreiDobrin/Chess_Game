@@ -47,9 +47,9 @@ public:
     Piece(Color c) : color(c), hasMoved(false) {} // constructor cu parametri
     Piece(Color c, bool hasMoved) : color(c), hasMoved(hasMoved) {} // constructor cu toti parametrii
     Piece() : color(Color::WHITE), hasMoved(false) {} // constructor fara parametri
-    Piece(Piece &other) = default;
+    Piece(Piece &other) = default; // copy constructor
 
-    ~Piece() = default;
+    ~Piece() = default; // destructor
 
     Piece& operator= (const Piece& other) { // supraincarcare operator atribuire '='
         if (this == &other) return *this;
@@ -61,7 +61,7 @@ public:
     }
 
     friend std::ostream& operator<< (std::ostream& os, const Piece& piece) {
-        os << "Color: " << piece.color << endl << "hasMoved: " << piece.hasMoved; // supraincarcare <<
+        os << "Color: " << piece.color << endl << "hasMoved: " << piece.hasMoved; // supraincarcare operator '<<'
         return os;
     }
 
@@ -100,19 +100,19 @@ public:
         }
         return is;
     }
-/*
-    int operator[](int index) const { // supraincarcare operator '[]'
-        if (index == 0) {
-            return this->getPosition().row;
-        }
-        else if (index == 1) {
-            return this->getPosition().col;
-        }
-        else {
-            throw std::out_of_range("Index must be 0 (row) or 1 (col)");
-        }
-    }
-*/
+    //
+    // int operator[](int index) const { // supraincarcare operator '[]'
+    //     if (index == 0) {
+    //         return this->getPosition().row;
+    //     }
+    //     else if (index == 1) {
+    //         return this->getPosition().col;
+    //     }
+    //     else {
+    //         throw std::out_of_range("Index must be 0 (row) or 1 (col)");
+    //     }
+    // }
+
 
 
     virtual vector<Position> getValidMoves(Board& board, Position pos) = 0;
@@ -201,6 +201,57 @@ public:
     }
 };
 
+class Bishop : public Piece {
+public:
+    Bishop(Color c) : Piece(c) {}
+
+    virtual void printPiece() {
+        if (this->getColor() == Color::WHITE)
+            cout << "[ wB ] ";
+        else
+            cout << "[ bB ] ";
+    }
+
+    vector<Position> getValidMoves(Board &board, Position pos);
+    string identifyPiece(Board &board, Position pos) {
+        return "Bishop";
+    }
+};
+
+class Queen : public Piece {
+public:
+    Queen(Color c) : Piece(c) {}
+
+    virtual void printPiece() {
+        if (this->getColor() == Color::WHITE)
+            cout << "[ wQ ] ";
+        else
+            cout << "[ bQ ] ";
+    }
+
+    vector<Position> getValidMoves(Board &board, Position pos);
+    string identifyPiece(Board &board, Position pos) {
+        return "Queen";
+    }
+};
+
+class Knight : public Piece {
+public:
+    Knight(Color c) : Piece(c) {}
+
+    virtual void printPiece() {
+        if (this->getColor() == Color::WHITE)
+            cout << "[ wN ] ";
+        else
+            cout << "[ bN ] ";
+    }
+
+    vector<Position> getValidMoves(Board &board, Position pos);
+    string identifyPiece(Board &board, Position pos) {
+        return "Knight";
+    }
+};
+
 class Board {
 
 private:
@@ -211,16 +262,27 @@ public:
     }
 
     void setupBoard() {
-            for (int j = 0; j < 8; j++) {
-                grid[1][j] = make_unique<Pawn>(Color::BLACK);
-                grid[6][j] = make_unique<Pawn>(Color::WHITE);
-            }
         grid[0][4] = make_unique<King>(Color::BLACK);
         grid[7][4] = make_unique<King>(Color::WHITE);
         grid[0][0] = make_unique<Rook>(Color::BLACK);
         grid[0][7] = make_unique<Rook>(Color::BLACK);
         grid[7][0] = make_unique<Rook>(Color::WHITE);
         grid[7][7] = make_unique<Rook>(Color::WHITE);
+        grid[0][2] = make_unique<Bishop>(Color::BLACK);
+        grid[0][5] = make_unique<Bishop>(Color::BLACK);
+        grid[7][2] = make_unique<Bishop>(Color::WHITE);
+        grid[7][5] = make_unique<Bishop>(Color::WHITE);
+        grid[0][3] = make_unique<Queen>(Color::BLACK);
+        grid[7][3] = make_unique<Queen>(Color::WHITE);
+        grid[0][1] = make_unique<Knight>(Color::BLACK);
+        grid[0][6] = make_unique<Knight>(Color::BLACK);
+        grid[7][1] = make_unique<Knight>(Color::WHITE);
+        grid[7][6] = make_unique<Knight>(Color::WHITE);
+            for (int j = 0; j < 8; j++) {
+                grid[1][j] = make_unique<Pawn>(Color::BLACK);
+                grid[6][j] = make_unique<Pawn>(Color::WHITE);
+            }
+
 
     }
 
@@ -473,6 +535,296 @@ vector<Position> Pawn::getValidMoves(Board& board, Position pos) {
     return validMoves;
 }
 
+vector<Position> Bishop::getValidMoves(Board &board, Position pos) {
+    vector<Position> validMoves;
+    //nord-vest
+    int r = pos.row - 1;
+    int c = pos.col - 1;
+    while (r >= 0 && c >= 0) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r --;
+        c --;
+    }
+    //nord-est
+    r = pos.row - 1;
+    c = pos.col + 1;
+    while (r >= 0 && c <= 7) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r --;
+        c ++;
+    }
+    //sud-vest
+    r = pos.row + 1;
+    c = pos.col - 1;
+    while (r <= 7 && c >= 0) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r ++;
+        c --;
+    }
+    //sud-est
+    r = pos.row + 1;
+    c = pos.col + 1;
+    while (r <= 7 && c <= 7) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r ++;
+        c ++;
+    }
+
+
+    return validMoves;
+}
+
+vector<Position> Queen::getValidMoves(Board &board, Position pos) {
+    vector<Position> validMoves;
+    //nord-vest
+    int r = pos.row - 1;
+    int c = pos.col - 1;
+    while (r >= 0 && c >= 0) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r --;
+        c --;
+    }
+    //nord-est
+    r = pos.row - 1;
+    c = pos.col + 1;
+    while (r >= 0 && c <= 7) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r --;
+        c ++;
+    }
+    //sud-vest
+    r = pos.row + 1;
+    c = pos.col - 1;
+    while (r <= 7 && c >= 0) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r ++;
+        c --;
+    }
+    //sud-est
+    r = pos.row + 1;
+    c = pos.col + 1;
+    while (r <= 7 && c <= 7) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r ++;
+        c ++;
+    }
+
+    //nord
+    r = pos.row - 1;
+    c = pos.col;
+    while (r >= 0) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r --;
+    }
+    //sud
+    r = pos.row + 1;
+    while (r <= 7) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        r ++;
+    }
+    //est
+    r = pos.row;
+    c = pos.col - 1;
+    while (c >= 0) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        c --;
+    }
+    //vest
+    c = pos.col + 1;
+    while (c <= 7) {
+        if (board.getPositionInfo({r,c}) != nullptr) {
+            if (board.getPositionInfo({r,c})->getColor() == board.getPositionInfo(pos)->getColor())
+                break;
+            validMoves.push_back({r,c});
+            break;
+        }
+        validMoves.push_back({r,c});
+        c ++;
+    }
+
+    return validMoves;
+}
+
+
+
+vector<Position> Knight::getValidMoves(Board &board, Position pos) {
+    vector<Position> validMoves;
+
+    int r = pos.row;
+    int c = pos.col;
+
+    //dreapta sus
+    // _ _ _
+    // |
+    int r1 = r - 1;
+    int c1 = c + 2;
+    if (r1 >= 0 && c1 <= 7) {
+        if (board.getPositionInfo({r1,c1}) != nullptr) {
+            if (board.getPositionInfo({r1,c1})->getColor() != board.getPositionInfo(pos)->getColor())
+                validMoves.push_back({r1,c1});
+        }
+        else
+            validMoves.push_back({r1,c1});
+    }
+    //stanga sus
+    // _ _ _
+    //     |
+    r1 = r - 1;
+    c1 = c - 2;
+    if (r1 >= 0 && c1 >= 0) {
+        if (board.getPositionInfo({r1,c1}) != nullptr) {
+            if (board.getPositionInfo({r1,c1})->getColor() != board.getPositionInfo(pos)->getColor())
+                validMoves.push_back({r1,c1});
+        }
+        else
+            validMoves.push_back({r1,c1});
+    }
+    //dreapta jos
+    // |
+    // _ _ _
+    r1 = r + 1;
+    c1 = c + 2;
+    if (r1 <= 7 && c1 <= 7) {
+        if (board.getPositionInfo({r1,c1}) != nullptr) {
+            if (board.getPositionInfo({r1,c1})->getColor() != board.getPositionInfo(pos)->getColor())
+                validMoves.push_back({r1,c1});
+        }
+        else
+            validMoves.push_back({r1,c1});
+    }
+    //stanga jos
+    //     |
+    // _ _ _
+    r1 = r + 1;
+    c1 = c - 2;
+    if (r1 <= 7 && c1 >= 0) {
+        if (board.getPositionInfo({r1,c1}) != nullptr) {
+            if (board.getPositionInfo({r1,c1})->getColor() != board.getPositionInfo(pos)->getColor())
+                validMoves.push_back({r1,c1});
+        }
+        else
+            validMoves.push_back({r1,c1});
+    }
+    // _ _
+    // |
+    // |
+    r1 = r - 2;
+    c1 = c + 1;
+    if (r1 >= 0 && c1 <= 7) {
+        if (board.getPositionInfo({r1,c1}) != nullptr) {
+            if (board.getPositionInfo({r1,c1})->getColor() != board.getPositionInfo(pos)->getColor())
+                validMoves.push_back({r1,c1});
+        }
+        else
+            validMoves.push_back({r1,c1});
+    }
+    // _ _
+    //   |
+    //   |
+    r1 = r - 2;
+    c1 = c - 1;
+    if (r1 >= 0 && c1 >= 0) {
+        if (board.getPositionInfo({r1,c1}) != nullptr) {
+            if (board.getPositionInfo({r1,c1})->getColor() != board.getPositionInfo(pos)->getColor())
+                validMoves.push_back({r1,c1});
+        }
+        else
+            validMoves.push_back({r1,c1});
+    }
+    // |
+    // |
+    // _ _
+    r1 = r + 2;
+    c1 = c + 1;
+    if (r1 <= 7 && c1 <= 7) {
+        if (board.getPositionInfo({r1,c1}) != nullptr) {
+            if (board.getPositionInfo({r1,c1})->getColor() != board.getPositionInfo(pos)->getColor())
+                validMoves.push_back({r1,c1});
+        }
+        else
+            validMoves.push_back({r1,c1});
+    }
+    //   |
+    //   |
+    // _ _
+    r1 = r + 2;
+    c1 = c - 1;
+    if (r1 <= 7 && c1 >= 0) {
+        if (board.getPositionInfo({r1,c1}) != nullptr) {
+            if (board.getPositionInfo({r1,c1})->getColor() != board.getPositionInfo(pos)->getColor())
+                validMoves.push_back({r1,c1});
+        }
+        else
+            validMoves.push_back({r1,c1});
+    }
+    return validMoves;
+}
 
 
 class gameEngine {
