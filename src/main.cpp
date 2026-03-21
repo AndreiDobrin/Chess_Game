@@ -3,14 +3,112 @@
 #include <memory>
 #include <typeinfo>
 #include <chrono>
+#include <cstring>
 #include <string>
 #include <tuple>
+#include "sqlite3.h"
+#include <stdio.h>
+#include <csignal>
+
 class Board;
 using namespace std;
 
 enum class Color {
     WHITE, BLACK
 };
+
+
+
+sqlite3* db;
+
+void openDB(const char* filename) {
+    int opened = sqlite3_open(filename, &db);
+    if (opened) {
+        printf("Database could not be opened %s\n", sqlite3_errmsg(db));
+    } else {
+        printf("Opened database successfully\n");
+    }
+}
+
+void initialiseDB() {
+    char* errMsg;
+    const char* sql =
+                "CREATE TABLE IF NOT EXISTS MATCHES("
+                "MATCH_ID INTEGER PRIMARY KEY,"
+                "DATE TEXT DEFAULT CURRENT_TIMESTAMP,"
+                "WHITE TEXT DEFAULT 'GUEST',"
+                "BLACK TEXT DEFAULT 'GUEST',"
+                "RESULT TEXT DEFAULT 'ABANDONED');"
+
+                "CREATE TABLE IF NOT EXISTS MATCH_MOVES("
+                "MOVE_ID INTEGER PRIMARY KEY,"
+                "MATCH_ID INTEGER,"
+                "MOVE TEXT,"
+                "MOVE_NUMBER INTEGER,"
+                "TIME_TO_MOVE REAL,"
+                "PLAYER TEXT,"
+                "FOREIGN KEY (MATCH_ID) REFERENCES MATCHES(MATCH_ID))";
+    int rc = sqlite3_exec(db, sql, nullptr, 0, &errMsg);
+    if(rc != SQLITE_OK){
+        printf("Error in executing SQL create: %s \n", errMsg);
+        //free the error message
+        sqlite3_free(errMsg);
+    } else {
+        printf("tables made successfully\n");
+
+    }
+}
+
+void insertData() {
+    char* errMsg;
+    const char* sql = "INSERT INTO MATCHES (WHITE, BLACK, RESULT) "
+                "VALUES('TEST1', 'TEST2', '1-0')";
+    int rc = sqlite3_exec(db, sql, nullptr, 0, &errMsg);
+    if (rc != SQLITE_OK) {
+        printf("error occured %s\n", errMsg);
+        sqlite3_free(errMsg);
+    } else {
+        printf("operation insert successful \n");
+    }
+}
+
+
+
+void getData() {
+    char* errMsg;
+    sqlite3_stmt* stmt;
+    const char* sql = "SELECT WHITE, BLACK, RESULT FROM MATCHES;";
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        printf("error occurred %s\n", sqlite3_errmsg(db));
+    } else {
+        printf("operation get successful \n ");
+    }
+    printf("--- MATCH HISTORY ---\n");
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        // 3. Read the columns for the current row
+        // Columns are 0-indexed based on your SELECT statement
+
+        // Column 0: WHITE
+        const unsigned char* white = sqlite3_column_text(stmt, 0);
+
+        // Column 1: BLACK
+        const unsigned char* black = sqlite3_column_text(stmt, 1);
+
+        // Column 2: RESULT
+        const unsigned char* result = sqlite3_column_text(stmt, 2);
+
+        // Print them out (casting them to standard C strings)
+        printf("%s vs %s | Result: %s\n",
+               (const char*)white,
+               (const char*)black,
+               (const char*)result);
+    }
+
+    sqlite3_finalize(stmt);
+}
+
 
     std::ostream& operator<< (std::ostream& os, const Color& color) { // supraincarcare << pentru tipul de date Color
         switch (color) {
@@ -41,6 +139,10 @@ struct Position {
     }
 
 };
+
+void insertMove(tuple<bool, char, Position, Position>, float) {
+    //const char* sql = "INSERT INTO"
+}
 
 class Piece {
     bool hasMoved; // for pawns' first move and for castling
@@ -836,6 +938,8 @@ class gameEngine {
     vector<tuple<char, bool, Position, Position>> moveHistory;
     float* moveDurations;
     int movesCapacity;
+    char whitePlayer[21];
+    char blackPlayer[21];
 
     void expandCapacity() {
         int newCapacity = movesCapacity * 2;
@@ -871,8 +975,7 @@ public:
         }
     }
 
-    void playerMove(Board& board) {
-        auto startTime = std::chrono::steady_clock::now();
+    bool playerMove(Board& board, std::chrono::steady_clock::time_point startTime) {
         string wantedMoveFrom, wantedMoveTo;
         cin >> wantedMoveFrom;
         cin >> wantedMoveTo;
@@ -881,7 +984,7 @@ public:
         cout << "Wanted Move: From "<< from << " to " << to << "\n";
         if (board.getPositionInfo(from) == nullptr) {
             cout << "No piece selected\n";
-            return;
+            return false;
         }
         bool toHasEnemyPiece = board.getPositionInfo(to) != nullptr && board.getPositionInfo(to)->getColor() != currentTurn;
 
@@ -901,7 +1004,9 @@ public:
 
                 currentTurn = Color::WHITE;
             }
+            return true;
         }
+        return false;
     }
 
     Color getCurrentTurn() {
@@ -916,16 +1021,57 @@ public:
     int getMoveHistorySize() {
         return moveHistory.size();
     }
+    void setPlayerName() {
+        cout << "White player's name: ";
+        cin.get(whitePlayer, 21);
+        if (!cin) {
+            cin.clear();
+            strcpy(whitePlayer, "GUEST");
+        }
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "\nBlack player's name: ";
+        cin.get(blackPlayer, 20);
+        if (!cin) {
+            cin.clear();
+            strcpy(blackPlayer, "GUEST");
+        }
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "------- " << whitePlayer << " VS. " << blackPlayer << " --------\n";
+    }
+    const char* getPlayerName(Color color) {
+        if (color == Color::WHITE)
+            return whitePlayer;
 
+        return blackPlayer;
+    }
 
+    string getMove(int i) {
+        if (i >= moveHistory.size())
+            return "Index too big";
+
+        string move = "";
+        if (get<0>(moveHistory[i]) != 'P') {
+            char piece = get<0>(moveHistory[i]);
+            move += piece;
+        }
+
+        if (get<1>(moveHistory[i]))
+            move += "x";
+        move += tolower(get<3>(moveHistory[i]).col + 'A');
+        move += get<3>(moveHistory[i]).row + 1;
+        return move;
+    }
 
 };
+
+
+
 
 std::ostream& operator<< (std::ostream& os, const vector<tuple<char, bool, Position, Position>>& moveHistory) { // supraincarcare << pentru moveHistory
     for (int i = 0; i < moveHistory.size(); i++) {
         os << i + 1 << ".: ";// << get<0>(moveHistory[i]);
         if (get<0>(moveHistory[i]) != 'P')
-            cout << get<0>(moveHistory[i]);
+            os << get<0>(moveHistory[i]);
         if (get<1>(moveHistory[i]))
             os << 'x';
         os << char(tolower(char(get<3>(moveHistory[i]).col + 'A'))) << get<3>(moveHistory[i]).row + 1 << "\n";
@@ -935,35 +1081,148 @@ std::ostream& operator<< (std::ostream& os, const vector<tuple<char, bool, Posit
 
 std::ostream& operator<< (std::ostream& os, const tuple<char, bool, Position, Position>& moveHistory) { // supraincarcare << pentru moveHistory
         if (get<0>(moveHistory) != 'P')
-            cout << get<0>(moveHistory);
+            os << get<0>(moveHistory);
         if (get<1>(moveHistory))
             os << 'x';
         os << char(tolower(char(get<3>(moveHistory).col + 'A'))) << get<3>(moveHistory).row + 1;
     return os;
 }
 
+long long insertMatch(const char* whitePlayer, const char* blackPlayer) {
+    sqlite3_stmt* stmt = nullptr;
+
+    const char* sql = "INSERT INTO MATCHES(WHITE, BLACK) VALUES(?, ?);";
+
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        cout << "Error inserting match in database\n";
+        return -1;
+    }
+    if (sqlite3_bind_text(stmt, 1, whitePlayer, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
+        sqlite3_bind_text(stmt, 2, blackPlayer, -1, SQLITE_TRANSIENT) != SQLITE_OK
+        ) {
+
+        cout << "Failed to bind variables: " << sqlite3_errmsg(db) << endl;
+        sqlite3_finalize(stmt);
+        return -1;
+    }
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        cout << "Execution failed: " << sqlite3_errmsg(db) << endl;
+        sqlite3_finalize(stmt);
+        return -1;
+    }
+
+    cout << "Match inserted in database successful\n";
+    sqlite3_finalize(stmt);
+    return sqlite3_last_insert_rowid(db);
+}
+
+void insertMove(const char* move, float duration, int turnNr, Color currentTurn, long long matchId) {
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql = "INSERT INTO MATCH_MOVES(MATCH_ID, MOVE, MOVE_NUMBER, TIME_TO_MOVE, PLAYER) VALUES(?, ?, ?, ?, ?);";
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        cout << "Error inserting move in database\n";
+        return;
+    }
+    char color[6];
+    if (currentTurn == Color::WHITE)
+        strcpy(color, "WHITE");
+    else
+        strcpy(color, "BLACK");
+
+    if (sqlite3_bind_int64(stmt, 1, matchId) != SQLITE_OK ||
+        sqlite3_bind_text(stmt, 1, move, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
+        sqlite3_bind_int(stmt, 1, turnNr) != SQLITE_OK ||
+        sqlite3_bind_double(stmt, 1, duration) != SQLITE_OK ||
+        sqlite3_bind_text(stmt, 1, color, -1, SQLITE_TRANSIENT) != SQLITE_OK
+        ) {
+        cout << "Failed to bind variables: " << sqlite3_errmsg(db) << endl;
+        sqlite3_finalize(stmt);
+        return;
+    }
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        cout << "Execution failed: " << sqlite3_errmsg(db) << endl;
+        sqlite3_finalize(stmt);
+        return;
+    }
+    cout << "Move inserted in db successfully\n";
+    sqlite3_finalize(stmt);
+
+}
+
+void insertWin(long long matchId, int result) {
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql = "UPDATE TABLE MATCHES"
+                      "SET RESULT = ?"
+                      "WHERE MATCH_ID = ?";
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        cout << "Error inserting win in database\n";
+        return;
+    }
+    string resultText;
+    switch (result) {
+        case -1:
+            resultText = "1/2-1/2.";
+        case 0:
+            resultText = "1-0.";
+        case 1:
+            resultText = "0-1.";
+    }
+
+    if (sqlite3_bind_text(stmt, 1, resultText.c_str(), -1, SQLITE_TRANSIENT) != SQLITE_OK ||
+        sqlite3_bind_int64(stmt, 1, matchId) != SQLITE_OK
+        ) {
+        cout << "Failed to bind variables: " << sqlite3_errmsg(db) << endl;
+        sqlite3_finalize(stmt);
+        return;
+        }
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        cout << "Execution failed: " << sqlite3_errmsg(db) << endl;
+        sqlite3_finalize(stmt);
+        return;
+    }
+    cout << "Match result inserted in db successfully\n";
+    sqlite3_finalize(stmt);
+}
 
 int main() {
+    char input[10] = "P10";
+    if (input[0] == 'P') {
+        strcpy(input, input+1);
+        int number_input = stoi(input );
+    }
+
+    const char* filename = "db.sqlite3";
+    openDB(filename);
+    initialiseDB();
+    //insertData();
+    getData();
     Board chessboard;
     gameEngine Engine;
-    Piece* targetPiece = chessboard.getPositionInfo({0,4});
-    cout << typeid(targetPiece).name() << endl;
-    Piece* targetPiece1 = chessboard.getPositionInfo({6,1});
-    //chessboard.movePiece({6,1}, {2, 0});
-    chessboard.showChessboard();
-/*
-    if (targetPiece != nullptr) {
-        vector<Position> moves = targetPiece->getValidMoves(chessboard);
-        for (Position move : moves) {
-            cout << move << " ";
-        }
-    }
-*/
+
     cout << endl;
+    int move_counter = 1;
+
+
+    Engine.setPlayerName();
+    long long matchId = insertMatch(Engine.getPlayerName(Color::WHITE), Engine.getPlayerName(Color::BLACK));
+    std::chrono::steady_clock::time_point turnStartTime = std::chrono::steady_clock::now();
     while (true) {
-        Engine.playerMove(chessboard);
-        auto history = Engine.getMoveHistory();
+        //creare meci
+        //insertMatch()
+        chessboard.showChessboard();
+
         float* durations = Engine.getMoveDuration();
+        if (Engine.playerMove(chessboard, turnStartTime)) {
+            //inserare miscare & reset timer
+            turnStartTime = std::chrono::steady_clock::now();
+            insertMove(Engine.getMove(move_counter).c_str(), durations[move_counter], move_counter, Engine.getCurrentTurn(), matchId);
+            move_counter++;
+        }
+        vector<tuple<char, bool, Position, Position>> history = Engine.getMoveHistory();
+
 
         for (int i = 0; i < history.size(); i++) {
             cout << "Move #" << i + 1 << ": "
@@ -972,14 +1231,17 @@ int main() {
         }
         // cout << Engine.getMoveHistory();
         // cout << Engine.getMoveDuration() << endl;
-        chessboard.showChessboard();
         if (chessboard.isKingInCheck(Engine.getCurrentTurn())) {
             cout << Engine.getCurrentTurn() << " is checked\n";
             if (chessboard.isCheckmate(Engine.getCurrentTurn())) {
-                if (Engine.getCurrentTurn() == Color::WHITE)
-                    cout << "BLACK WINS!!!";
-                else
-                    cout << "WHITE WINS!!!";
+                if (Engine.getCurrentTurn() == Color::WHITE) {
+                    cout << "BLACK WINS!!!\n";
+                    insertWin(matchId, 1);
+                }
+                else if (Engine.getCurrentTurn() == Color::BLACK) {
+                    cout << "WHITE WINS!!!\n";
+                    insertWin(matchId, 0);
+                }
                 break;
             }
 
@@ -987,10 +1249,11 @@ int main() {
         else {
             if (chessboard.isCheckmate(Engine.getCurrentTurn())) {
                 cout << "DRAW";
+                insertWin(matchId, -1);
                 break;
             }
         }
     }
-
+    sqlite3_close(db);
     return 0;
 }
