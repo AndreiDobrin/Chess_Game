@@ -1311,11 +1311,6 @@ void getAllMatchMoves() {
 }
 
 int main() {
-    char input[10] = "P10";
-    if (input[0] == 'P') {
-        strcpy(input, input+1);
-        int number_input = stoi(input);
-    }
 
     const char* filename = "db.sqlite3";
     openDB(filename);
@@ -1340,13 +1335,13 @@ int main() {
             return 0;
         }
         else if (userInput == 2) {
+            int offset = 0;
+            int limit = 10;
             while (true) {
-                int offset = 0;
-                int limit = 10;
                 int totalMatches = getTotalMatches();
-                cout << "Select match(0-9) or page(0-" << totalMatches/10 << ") - '-1' to exit\n";
+                cout << "Select match(0-9) or page(P0-P" << totalMatches / 10 << ") - 'E' to exit\n";
                 cout << "------ START ------\n";
-                vector<tuple<long long, string, string, string, string>> matches = getMatchIds(0,10);
+                vector<tuple<long long, string, string, string, string> > matches = getMatchIds(offset, limit);
                 if (!matches.empty()) {
                     for (int i = 0; i < matches.size(); i++) {
                         cout << i << ". ";
@@ -1355,29 +1350,67 @@ int main() {
                     }
                 }
                 cout << "------ END ------\n";
-                int historyUserInput;
+
+
+                char historyUserInput[10];
+                bool page = false;
+
                 cin >> historyUserInput;
-                if (historyUserInput >= 0 && historyUserInput < matches.size()) {
-                    int matchToGet = historyUserInput;
-                    cout << "Getting info about match " << matchToGet << "...\n\n";
-                    cout << "------ START ------\n";
-                    vector<string> matchMoves = getMatchMoves(get<0>(matches[matchToGet]));
-                    for (int i = 0; i < matchMoves.size(); i++) {
-                        cout << i+1 << ". " << matchMoves[i] << endl;
+                //input -> selectare pagina
+                if (tolower(historyUserInput[0]) == 'p') {
+                    strcpy(historyUserInput, historyUserInput + 1);
+                    page = true;
+                }
+
+                //transformare input in int
+                int number_input;
+                if (tolower(historyUserInput[0] == 'e' && strlen(historyUserInput) == 1))
+                    break;
+                bool ok = true;
+                if (strlen(historyUserInput) == 0) {
+                    ok = false;
+                }
+
+                for (int i = 0; i < strlen(historyUserInput); i++) {
+                    if (!isdigit(historyUserInput[i])) {
+                        ok = false;
+                        break;
                     }
-                    cout << "------ END ------\n\n";
-                    break;
                 }
-                if (historyUserInput == -1) {
-                    cout << "Going back...\n";
-                    break;
+                if (ok) {
+                    number_input = stoi(historyUserInput);
+
+                    //selectare meci
+                    if (!page && number_input >= 0 && number_input < matches.size()) {
+                        int matchToGet = number_input;
+                        cout << "Getting info about match " << matchToGet << "...\n\n";
+                        cout << "------ START ------\n";
+                        vector<string> matchMoves = getMatchMoves(get<0>(matches[matchToGet]));
+                        for (int i = 0; i < matchMoves.size(); i++) {
+                            cout << i + 1 << ". " << matchMoves[i] << endl;
+                        }
+                        cout << "------ END ------\n\n";
+                        break;
+                    }
+                    //selectare pagina
+                    if (page && number_input <= totalMatches / 10 && number_input >= 0) {
+                        offset = number_input * limit;
+                    }
+                    if (number_input == -1) {
+                        cout << "Going back...\n";
+                        break;
+                    }
+                    if (!cin) {
+                        cin.clear();
+                        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                        cout << "Input invalid\n";
+                    }
                 }
-                if (!cin) {
+                else {
                     cin.clear();
                     cin.ignore(numeric_limits<streamsize>::max(), '\n');
                     cout << "Input invalid\n";
                 }
-
             }
         } else if (userInput == 1) {
             cin.clear();
