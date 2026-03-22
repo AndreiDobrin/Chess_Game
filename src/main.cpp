@@ -980,10 +980,15 @@ public:
         Position from = {wantedMoveFrom[1] - '1', toupper(wantedMoveFrom[0]) - 'A'};
         Position to = {wantedMoveTo[1] - '1', toupper(wantedMoveTo[0]) - 'A'};
         cout << "Wanted Move: From "<< from << " to " << to << "\n";
+        if (from.row > 7 || from.row < 0 || from.col > 7 || from.col < 0 || to.row > 7 || to.row < 0 || to.col > 7 || to.col < 0) {
+            cout << "Invalid move: Out of bounds\n";
+            return false;
+        }
         if (board.getPositionInfo(from) == nullptr) {
             cout << "No piece selected\n";
             return false;
         }
+
         bool toHasEnemyPiece = board.getPositionInfo(to) != nullptr && board.getPositionInfo(to)->getColor() != currentTurn;
 
         char fromPiece = board.getPositionInfo(from)->identifyPiece(board, from)[0];
