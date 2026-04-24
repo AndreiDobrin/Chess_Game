@@ -9,6 +9,9 @@
 #include "sqlite3.h"
 #include <stdio.h>
 #include <csignal>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 class Board;
 using namespace std;
@@ -218,8 +221,8 @@ public:
 
 
 
-    virtual vector<Position> getValidMoves(Board& board, Position pos) = 0;
-    virtual string identifyPiece(Board& board, Position pos) = 0;
+    virtual vector<Position> getValidMoves(Board& board, Position pos, bool checkCastling = true) = 0;
+    virtual string identifyPiece() = 0;
     virtual void printPiece() = 0;
 
     /*
@@ -257,14 +260,14 @@ public:
 
     virtual void printPiece() {
         if (this->getColor() == Color::WHITE)
-            cout << "[ wK ] ";
+            cout << "[ wK ]";
         else {
-            cout << "[ bK ] ";
+            cout << "[ bK ]";
         }
     }
     vector<Position> getLegalMoves(Board& board, vector<Position> validMoves, Position pos);
-    vector<Position> getValidMoves(Board& board, Position pos);
-    string identifyPiece(Board& board, Position pos) {
+    vector<Position> getValidMoves(Board& board, Position pos, bool checkCastling = true) override;
+    string identifyPiece() {
         return "King";
     };
 };
@@ -275,13 +278,13 @@ public:
 
     virtual void printPiece() {
         if (this-> getColor() == Color::WHITE)
-            cout << "[ wR ] ";
+            cout << "[ wR ]";
         else {
-            cout << "[ bR ] ";
+            cout << "[ bR ]";
         }
     }
-    vector<Position> getValidMoves(Board& board, Position pos);
-    string identifyPiece(Board& board, Position pos) {
+    vector<Position> getValidMoves(Board& board, Position pos, bool checkCastling = true);
+    string identifyPiece() {
         return "Rook";
     }
 };
@@ -292,14 +295,14 @@ public:
 
     virtual void printPiece() {
         if (this->getColor() == Color::WHITE)
-            cout<< "[ wP ] ";
+            cout<< "[ wP ]";
         else {
-            cout << "[ bP ] ";
+            cout << "[ bP ]";
         }
     }
 
-    vector<Position> getValidMoves(Board& board, Position pos);
-    string identifyPiece(Board& board, Position pos) {
+    vector<Position> getValidMoves(Board& board, Position pos, bool checkCastling = true);
+    string identifyPiece() {
         return "Pawn";
     }
 };
@@ -310,13 +313,13 @@ public:
 
     virtual void printPiece() {
         if (this->getColor() == Color::WHITE)
-            cout << "[ wB ] ";
+            cout << "[ wB ]";
         else
-            cout << "[ bB ] ";
+            cout << "[ bB ]";
     }
 
-    vector<Position> getValidMoves(Board &board, Position pos);
-    string identifyPiece(Board &board, Position pos) {
+    vector<Position> getValidMoves(Board &board, Position pos, bool checkCastling = true);
+    string identifyPiece() {
         return "Bishop";
     }
 };
@@ -327,13 +330,13 @@ public:
 
     virtual void printPiece() {
         if (this->getColor() == Color::WHITE)
-            cout << "[ wQ ] ";
+            cout << "[ wQ ]";
         else
-            cout << "[ bQ ] ";
+            cout << "[ bQ ]";
     }
 
-    vector<Position> getValidMoves(Board &board, Position pos);
-    string identifyPiece(Board &board, Position pos) {
+    vector<Position> getValidMoves(Board &board, Position pos, bool checkCastling = true);
+    string identifyPiece() {
         return "Queen";
     }
 };
@@ -344,13 +347,13 @@ public:
 
     virtual void printPiece() {
         if (this->getColor() == Color::WHITE)
-            cout << "[ wN ] ";
+            cout << "[ wN ]";
         else
-            cout << "[ bN ] ";
+            cout << "[ bN ]";
     }
 
-    vector<Position> getValidMoves(Board &board, Position pos);
-    string identifyPiece(Board &board, Position pos) {
+    vector<Position> getValidMoves(Board &board, Position pos, bool checkCastling = true);
+    string identifyPiece() {
         return "Knight";
     }
 };
@@ -359,6 +362,9 @@ class Board {
 
 private:
     unique_ptr<Piece> grid[8][8];
+
+    Position lastMoveFrom = {-1, -1};
+    Position lastMoveTo = {-1, -1};
 public:
     Board() {
         setupBoard();
@@ -399,10 +405,78 @@ public:
             cout << i+1 << "  ";
             for (int j = 0; j < 8; j++) {
                 if (grid[i][j] == nullptr)
-                    cout << "[    ] ";
+                    cout << "[    ]";
                 else {
                     grid[i][j]->printPiece();
                 }
+                cout << " ";
+            }
+            cout << endl;
+        }
+    }
+
+    void showChessBoard(Position from, vector<Position> pos) {
+        cout << "     ";
+        for (int j = 0; j < 8; j++) {
+            cout << char('A' + j) << "      ";
+        }
+        cout << endl;
+        for (int i = 0; i < 8; i++) {
+            cout << i+1 << "  ";
+            for (int j = 0; j < 8; j++) {
+                bool ok = false;
+                //selected piece
+                if (from.col == j && from.row == i) {
+                    ok = true;
+                    cout << "\033[103;30m";
+                }
+                //valid moves for selected piece
+                else {
+                    for (int k = 0; k < pos.size(); k++) {
+                        if (j == pos[k].col && i == pos[k].row) {
+                            ok = true;
+                            cout << "\033[104;30m";
+                        }
+                    }
+                }
+                if (grid[i][j] == nullptr)
+                    cout << "[    ]";
+                else {
+                    grid[i][j]->printPiece();
+                }
+                if (ok) {
+                    cout << "\033[0m";
+                }
+                cout << " ";
+            }
+            cout << endl;
+        }
+    }
+
+    void showChessBoard(Position from, Position to) {
+        cout << "     ";
+        for (int j = 0; j < 8; j++) {
+            cout << char('A' + j) << "      ";
+        }
+        cout << endl;
+        for (int i = 0; i < 8; i++) {
+            cout << i+1 << "  ";
+            for (int j = 0; j < 8; j++) {
+                bool ok = false;
+                //selected piece
+                if ((from.col == j && from.row == i) || (to.col == j && to.row == i)) {
+                    ok = true;
+                    cout << "\033[103;30m";
+                }
+                if (grid[i][j] == nullptr)
+                    cout << "[    ]";
+                else {
+                    grid[i][j]->printPiece();
+                }
+                if (ok) {
+                    cout << "\033[0m";
+                }
+                cout << " ";
             }
             cout << endl;
         }
@@ -420,7 +494,7 @@ public:
         for (int i = 0; i <= 7; i++) {
             for (int j = 0; j <= 7; j++) {
                 Piece* selectedPiece = this->getPositionInfo({i,j});
-                if (selectedPiece != nullptr && selectedPiece->identifyPiece(*this, {i,j}) == "King"
+                if (selectedPiece != nullptr && selectedPiece->identifyPiece() == "King"
                 && selectedPiece->getColor() == currentTurn) {
                     kingPos = {i,j};
                     kingFound = true;
@@ -440,7 +514,7 @@ public:
             for (int j = 0; j <= 7; j++) {
                 Piece* selectedPiece = this->getPositionInfo({i,j});
                 if (selectedPiece != nullptr && selectedPiece->getColor() != currentTurn) {
-                    vector<Position> validMoves = this->getPositionInfo({i,j})->getValidMoves(*this,{i,j});
+                    vector<Position> validMoves = this->getPositionInfo({i,j})->getValidMoves(*this,{i,j}, false);
                     for (Position move : validMoves) {
                         if (move == kingPos) {
                             return true;
@@ -451,6 +525,23 @@ public:
         }
         return false;
     }
+
+    bool isPieceAttacked(Color attackedPieceColor, Position pos) {
+            for (int i = 0 ; i <= 7; i++) {
+                for (int j = 0; j <= 7; j++) {
+                    Piece* selectedPiece = this->getPositionInfo({i,j});
+                    if (selectedPiece != nullptr && selectedPiece->getColor() != attackedPieceColor) {
+                        vector<Position> validMoves = this->getPositionInfo({i,j})->getValidMoves(*this,{i,j}, false);
+                        for (Position move : validMoves) {
+                            if (move == pos) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
 
     vector<Position> getStrictlyValidMoves(Position from) {
         vector<Position> strictlyValidMoves;
@@ -501,9 +592,40 @@ bool movePiece(Position from, Position to, Color currentTurn) {
         }
     }
     if (ok) {
+        // check for castling
+        if (getPositionInfo(from)->identifyPiece() == "King") {
+            if (abs(from.col - to.col) == 2) {
+                if (to.row == 7 && to.col == 2) {
+                    this->grid[7][3] = std::move(this->grid[7][0]);
+                }
+                if (to.row == 7 && to.col == 6) {
+                    this->grid[7][5] = std::move(this->grid[7][7]);
+                }
+                if (to.row == 0 && to.col == 2) {
+                    this->grid[0][3] = std::move(this->grid[0][0]);
+                }
+                if (to.row == 0 && to.col == 6) {
+                    this->grid[0][5] = std::move(this->grid[0][7]);
+                }
+            }
+        }
+
+        //check for en passant
+        if (getPositionInfo(from)->identifyPiece() == "Pawn") {
+            if (abs(from.col - to.col) == 1) {
+                if (getPositionInfo(to) == nullptr) {
+                    int moveOrientation = (currentTurn == Color::WHITE ? 1 : -1);
+                    grid[to.row + moveOrientation][to.col] = nullptr;
+                }
+            }
+        }
         this->grid[to.row][to.col] = std::move(this->grid[from.row][from.col]);
         //grid[to.row][to.col]->setPosition(to);
         this->grid[to.row][to.col]->setHasMoved(true);
+
+        this->lastMoveFrom = from;
+        this->lastMoveTo = to;
+
         return true;
     }
     cout << "Invalid move\n";
@@ -524,9 +646,12 @@ bool isCheckedAfterMove(Position from, Position to, Color currentTurn) {
         this->grid[to.row][to.col] = std::move(capturedCopy);
         return inCheck;
     }
+
+    Position getLastMoveFrom() const { return lastMoveFrom; }
+    Position getLastMoveTo() const { return lastMoveTo; }
 };
 
-vector<Position> King::getValidMoves(Board& board, Position pos) {
+vector<Position> King::getValidMoves(Board& board, Position pos, bool checkCastling) {
     vector<Position> validMoves;
     // int r = pos.row;
     // int c = pos.col;
@@ -540,10 +665,66 @@ vector<Position> King::getValidMoves(Board& board, Position pos) {
                 validMoves.push_back({i,j});
         }
     }
+
+    // castling
+    if (checkCastling && this->getHasMoved() == false && !board.isKingInCheck(pieceColor)) {
+        if (pieceColor == Color::WHITE) {
+            if (board.getPositionInfo({7,7}) != nullptr) {
+                if (board.getPositionInfo({7, 7})->getHasMoved() == false &&
+                   board.getPositionInfo({7, 6}) == nullptr &&
+                   board.getPositionInfo({7, 5}) == nullptr) {
+
+                    if (!board.isPieceAttacked(Color::WHITE, {7,5})) {
+                        validMoves.push_back({7, 6});
+                    }
+                   }
+            }
+            if (board.getPositionInfo({7,0}) != nullptr) {
+                if (board.getPositionInfo({7, 0})->getHasMoved() == false &&
+                   board.getPositionInfo({7, 1}) == nullptr &&
+                   board.getPositionInfo({7, 2}) == nullptr &&
+                   board.getPositionInfo({7, 3}) == nullptr) {
+
+                    if (!board.isPieceAttacked(Color::WHITE, {7,3}) &&
+                        !board.isPieceAttacked(Color::WHITE, {7,2})) {
+
+                        validMoves.push_back({7, 2});
+                    }
+                   }
+            }
+        }
+
+        if (pieceColor == Color::BLACK) {
+            if (board.getPositionInfo({0,0}) != nullptr) {
+                if (board.getPositionInfo({0,0})->getHasMoved() == false &&
+                   board.getPositionInfo({0,1}) == nullptr &&
+                   board.getPositionInfo({0,2}) == nullptr &&
+                   board.getPositionInfo({0,3}) == nullptr) {
+
+                    if (!board.isPieceAttacked(Color::WHITE, {0,3}) &&
+                        !board.isPieceAttacked(Color::WHITE, {0,2})) {
+
+                        validMoves.push_back({0,2});
+                    }
+                   }
+            }
+            if (board.getPositionInfo({0,7}) != nullptr) {
+                if (board.getPositionInfo({0,7})->getHasMoved() == false &&
+                   board.getPositionInfo({0,6}) == nullptr &&
+                   board.getPositionInfo({0,5}) == nullptr) {
+
+                    if (!board.isPieceAttacked(Color::WHITE, {0,5})) {
+                        validMoves.push_back({0,6});
+                    }
+                   }
+            }
+        }
+    }
+
     return validMoves;
 }
 
-vector<Position> Rook::getValidMoves(Board& board, Position pos) {
+vector<Position> Rook::getValidMoves(Board& board, Position pos, bool checkCastling) {
     vector<Position> validMoves;
     //nord
     int r = pos.row - 1;
@@ -599,7 +780,7 @@ vector<Position> Rook::getValidMoves(Board& board, Position pos) {
 }
 
 
-vector<Position> Pawn::getValidMoves(Board& board, Position pos) {
+vector<Position> Pawn::getValidMoves(Board& board, Position pos, bool checkCastling) {
     vector<Position> validMoves;
     int r = pos.row;
     int c = pos.col;
@@ -635,10 +816,30 @@ vector<Position> Pawn::getValidMoves(Board& board, Position pos) {
         validMoves.push_back({r + moveOrientation, c + 1});
     }
 
+    // en passant
+    if (board.getLastMoveFrom().row != -1 && board.getLastMoveFrom().col != -1) {
+        Position lastFrom = board.getLastMoveFrom();
+        Position lastTo = board.getLastMoveTo();
+        Piece* lastPiece = board.getPositionInfo(lastTo);
+
+        if (lastPiece != nullptr &&
+            lastPiece->getColor() != this->getColor() &&
+            lastPiece->identifyPiece() == "Pawn") {
+
+            if (abs(lastFrom.row - lastTo.row) == 2) {
+
+                if (pos.row == lastTo.row && abs(pos.col - lastTo.col) == 1) {
+
+                    validMoves.push_back({pos.row + moveOrientation, lastTo.col});
+                }
+            }
+            }
+    }
+
     return validMoves;
 }
 
-vector<Position> Bishop::getValidMoves(Board &board, Position pos) {
+vector<Position> Bishop::getValidMoves(Board &board, Position pos, bool checkCastling) {
     vector<Position> validMoves;
     //nord-vest
     int r = pos.row - 1;
@@ -701,7 +902,7 @@ vector<Position> Bishop::getValidMoves(Board &board, Position pos) {
     return validMoves;
 }
 
-vector<Position> Queen::getValidMoves(Board &board, Position pos) {
+vector<Position> Queen::getValidMoves(Board &board, Position pos, bool checkCastling) {
     vector<Position> validMoves;
     //nord-vest
     int r = pos.row - 1;
@@ -816,7 +1017,7 @@ vector<Position> Queen::getValidMoves(Board &board, Position pos) {
 
 
 
-vector<Position> Knight::getValidMoves(Board &board, Position pos) {
+vector<Position> Knight::getValidMoves(Board &board, Position pos, bool checkCastling) {
     vector<Position> validMoves;
 
     int r = pos.row;
@@ -976,22 +1177,37 @@ public:
     bool playerMove(Board& board, std::chrono::steady_clock::time_point startTime) {
         string wantedMoveFrom, wantedMoveTo;
         cin >> wantedMoveFrom;
-        cin >> wantedMoveTo;
         Position from = {wantedMoveFrom[1] - '1', toupper(wantedMoveFrom[0]) - 'A'};
-        Position to = {wantedMoveTo[1] - '1', toupper(wantedMoveTo[0]) - 'A'};
-        cout << "Wanted Move: From "<< from << " to " << to << "\n";
-        if (from.row > 7 || from.row < 0 || from.col > 7 || from.col < 0 || to.row > 7 || to.row < 0 || to.col > 7 || to.col < 0) {
+        if (from.row > 7 || from.row < 0 || from.col > 7 || from.col < 0) {
             cout << "Invalid move: Out of bounds\n";
+            board.showChessboard();
             return false;
         }
         if (board.getPositionInfo(from) == nullptr) {
             cout << "No piece selected\n";
+            board.showChessboard();
+            return false;
+        }
+        vector<Position> wantedValidPositions = board.getPositionInfo(from)->getValidMoves(board, from);
+        board.showChessBoard(from, wantedValidPositions);
+
+        cin >> wantedMoveTo;
+        Position to = {wantedMoveTo[1] - '1', toupper(wantedMoveTo[0]) - 'A'};
+        cout << "Wanted Move: From "<< from << " to " << to << "\n";
+        if (to.row > 7 || to.row < 0 || to.col > 7 || to.col < 0) {
+            cout << "Invalid move: Out of bounds\n";
+            board.showChessboard();
+            return false;
+        }
+        if (board.getPositionInfo(from) == nullptr) {
+            cout << "No piece selected\n";
+            board.showChessboard();
             return false;
         }
 
         bool toHasEnemyPiece = board.getPositionInfo(to) != nullptr && board.getPositionInfo(to)->getColor() != currentTurn;
 
-        char fromPiece = board.getPositionInfo(from)->identifyPiece(board, from)[0];
+        char fromPiece = board.getPositionInfo(from)->identifyPiece()[0];
 
         if (board.movePiece(from, to, currentTurn)) {
             auto endTime = chrono::steady_clock::now();
@@ -1007,8 +1223,10 @@ public:
 
                 currentTurn = Color::WHITE;
             }
+            board.showChessBoard(from, to);
             return true;
         }
+        board.showChessboard();
         return false;
     }
 
@@ -1063,6 +1281,10 @@ public:
         move += tolower(get<3>(moveHistory[i]).col + 'A');
         move += to_string(get<3>(moveHistory[i]).row + 1);
         return move;
+    }
+
+    vector<Position> getLastMove() {
+        return {get<2>(moveHistory[moveHistory.size() - 1]), get<3>(moveHistory[moveHistory.size() - 1])};
     }
 
 };
@@ -1248,6 +1470,8 @@ int getTotalMatches() {
     return -1;
 }
 
+
+
 void insertMove (const string moveMade, const float timeToMove, const int move_counter, const Color moveMadeBy, const long long matchId) {
     char* errMsg;
     string color = moveMadeBy == Color::WHITE ? "White" : "Black";
@@ -1265,7 +1489,7 @@ void insertMove (const string moveMade, const float timeToMove, const int move_c
         sqlite3_bind_double(stmt, 4, timeToMove) != SQLITE_OK ||
         sqlite3_bind_text(stmt, 5, color.c_str(), -1, SQLITE_TRANSIENT) != SQLITE_OK
         ) {
-        cout << "Failed to bind variables(line 1263): " << sqlite3_errmsg(db) << endl;
+        cout << "Failed to bind variables: " << sqlite3_errmsg(db) << endl;
         sqlite3_finalize(stmt);
         return;
     }
@@ -1317,6 +1541,13 @@ void getAllMatchMoves() {
 
 int main() {
 
+    #ifdef _WIN32
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        DWORD dwMode = 0;
+        GetConsoleMode(hOut, &dwMode);
+        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        SetConsoleMode(hOut, dwMode);
+    #endif
     const char* filename = "db.sqlite3";
     openDB(filename);
     initialiseDB();
@@ -1432,12 +1663,12 @@ int main() {
             Engine.setPlayerName();
             long long matchId = insertMatch(Engine.getPlayerName(Color::WHITE), Engine.getPlayerName(Color::BLACK));
             std::chrono::steady_clock::time_point turnStartTime = std::chrono::steady_clock::now();
+            chessboard.showChessboard();
             while (true) {
                 //creare meci
                 //insertMatch()
-                chessboard.showChessboard();
-
                 float *durations = Engine.getMoveDuration();
+
                 if (Engine.playerMove(chessboard, turnStartTime)) {
                     //inserare miscare & reset timer
                     turnStartTime = std::chrono::steady_clock::now();
@@ -1445,16 +1676,18 @@ int main() {
                                Engine.getCurrentTurn(), matchId);
                     move_counter++;
                 }
+
+
                 vector<tuple<char, bool, Position, Position> > history = Engine.getMoveHistory();
-
-
                 for (int i = 0; i < history.size(); i++) {
                     cout << "Move #" << i + 1 << ": "
                             << history[i]
                             << " | Duration: " << durations[i] << "s" << endl;
                 }
-                // cout << Engine.getMoveHistory();
-                // cout << Engine.getMoveDuration() << endl;
+
+                cout << Engine.getLastMove()[0] << " ";
+                cout << Engine.getLastMove()[1] << endl;
+
                 if (chessboard.isKingInCheck(Engine.getCurrentTurn())) {
                     cout << Engine.getCurrentTurn() << " is checked\n";
                     if (chessboard.isCheckmate(Engine.getCurrentTurn())) {
