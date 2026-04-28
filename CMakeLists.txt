@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 4.1)
 project(Chess_Game)
 
-include_directories(vendor/sqlite src)
 
-add_executable(${PROJECT_NAME}
-        src/main.cpp
-        vendor/sqlite/sqlite3.c
-)
+add_subdirectory(vendor)
+add_subdirectory(src)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+

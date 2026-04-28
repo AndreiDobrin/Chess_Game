@@ -1,6 +1,33 @@
-add_executable(${PROJECT_NAME} main.cpp
+add_executable(${PROJECT_NAME}
+        Piece.h
+        Piece.cpp
+        Color.cpp
+        Color.h
+        Position.cpp
+        Position.h
+        King.cpp
+        King.h
+        Board.cpp
+        Board.h
+        Pawn.cpp
+        Pawn.h
+        Rook.cpp
+        Rook.h
+        Knight.cpp
+        Knight.h
+        Bishop.cpp
+        Bishop.h
+        Queen.cpp
+        Queen.h
+        GameDB.cpp
+        GameDB.h
+        gameEngine.cpp
+        gameEngine.h
+        Globals.cpp
+        Globals.h
+        UI.h
         Window.h
-        Rectangle.h)
-target_sources(${PROJECT_NAME} PRIVATE ../vendor/sqlite/sqlite3.c)
-target_include_directories(${PROJECT_NAME} PRIVATE ../vendor/sqlite)
+        myRectangle.h
+)
+target_sources(${PROJECT_NAME} PRIVATE main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE vendor)
