@@ -24,7 +24,6 @@
 #include "GameDB.h"
 #include "GameEngine.h"
 #include "UI.h"
-#include "Window.h"
 #include "SDL3/SDL.h"
 #include "SDL3_image/SDL_image.h"
 #include "SDL3_ttf/SDL_ttf.h"

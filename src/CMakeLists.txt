@@ -30,7 +30,6 @@ add_executable(${PROJECT_NAME}
         Globals.cpp
         Globals.h
         UI.h
-        Window.h
         myRectangle.h
         UI.cpp
 )
