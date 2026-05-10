@@ -42,18 +42,12 @@ cd Chess_Game
 
 ## Pasul 2: Configurarea proiectului cu CMake
 
-Este recomandat să creezi un folder dedicat pentru procesul de build (compilare):
-
-```bash
-mkdir build
-cd build
-```
-
-Acum rulează CMake pentru a genera fișierele de configurare:
-
 ```bash
 # Pentru configurarea standard:
-cmake ..
+
+    cmake -E make_directory build                                                                                                                                                                                                   
+    cmake -E chdir build cmake ..
+
 ```
 
 *Notă pentru utilizatorii de Windows (MinGW):* 
@@ -95,4 +89,4 @@ După compilare, executabilul va fi generat în folderul `build/src`.
 
 1. **Eroare la `cmake ..` (Missing SDL3 / include errors)**: Înseamnă că bibliotecile din `vendor/` nu au fost descărcate. Rulează `git submodule update --init --recursive`.
 2. **Ecran Negru / Piese lipsă**: Asigură-te că rulezi jocul având folderul rădăcină ca "Working Directory". Executabilul caută imaginile în `./src/chess_pieces/`.
-3. **Lipsește `arial.ttf`**: Asigură-te că fișierul font se află în folderul din care rulezi jocul.
+3. **Lipsește `arial.ttf`**: Asigură-te că fișierul font se află în folderul din care rulezi jocul. working directory setat ca Chess_Game/
