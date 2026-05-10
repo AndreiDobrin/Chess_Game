@@ -5,6 +5,10 @@ set(SDLTTF_VENDORED ON CACHE BOOL "Use vendored third-party libraries" FORCE)
 set(SDLTTF_HARFBUZZ OFF CACHE BOOL "Disable harfbuzz" FORCE)
 set(SDLTTF_PLUTOSVG OFF CACHE BOOL "Disable plutosvg" FORCE)
 
+# Disable complex image formats that require assembly compilers (NASM)
+set(SDLIMAGE_AVIF OFF CACHE BOOL "Disable AVIF" FORCE)
+set(SDLIMAGE_WEBP OFF CACHE BOOL "Disable WEBP" FORCE)
+
 add_subdirectory(SDL)
 add_subdirectory(SDL_image)
 add_subdirectory(SDL_ttf)
