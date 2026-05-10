@@ -1,3 +1,8 @@
+# De ce am dat submit numai la un README?
+
+Teams are limita de 500MB iar fisierul cu codul sursa are >1.5GB dimensiune. 
+
+
 # Joc de Șah (Chess Game)
 
 Acesta este un joc de șah dezvoltat în C++ folosind interfața grafică SDL3 și SQLite pentru baza de date (istoricul meciurilor). 
@@ -20,7 +25,7 @@ Pentru a compila și rula acest proiect, vei avea nevoie de următoarele instala
 
 Alege una dintre cele două modalități de mai jos pentru a obține proiectul:
 
-### Varianta A: Clonare de pe GitHub (Recomandat)
+### Clonare de pe GitHub
 
 Deschide un terminal și rulează comanda de mai jos. Este **critic** să folosești parametrul `--recursive` pentru a descărca și bibliotecile externe (SDL3, SQLite etc.) și să specifici branch-ul `gui`:
 
@@ -29,14 +34,6 @@ git clone -b gui --recursive https://github.com/AndreiDobrin/Chess_Game.git
 cd Chess_Game
 ```
 
-### Varianta B: Folosind Arhiva ZIP (Predare proiect)
-
-1. Dezarhivează fișierul `Chess_Game.zip`.
-2. Intră în folderul rezultat (`cd Chess_Game`).
-3. **Atenție:** Dacă arhiva a fost descărcată folosind butonul "Download ZIP" de pe GitHub, folderul `vendor/` va fi gol. În acest caz, trebuie să inițializezi manual bibliotecile externe rulând următoarea comandă în terminal:
-   ```bash
-   git submodule update --init --recursive
-   ```
 
 ---
 
