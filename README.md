@@ -2,6 +2,9 @@
 
 Teams are limita de 500MB iar fisierul cu codul sursa are >1.5GB dimensiune. 
 
+# ATENTIE!
+
+*Branch-ul cu GUI este "gui", nu master/main.*
 
 # Joc de Șah (Chess Game)
 
