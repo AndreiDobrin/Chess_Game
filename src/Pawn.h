@@ -29,7 +29,13 @@ public:
     }
 
     void printPiece() override;
+    void printPieceConsole() override;
     std::vector<Position> doGetValidMoves(Board& board, Position pos, bool checkCastling) override;
+    
+    // Cerinta 6: Metoda specifica pentru downcasting
+    bool canPromote(Position pos);
+    void promote(); 
+
     //std::vector<Position> getValidMoves(Board& board, Position pos, bool checkCastling = true);
     std::string identifyPiece() override;
     bool drawPiece();

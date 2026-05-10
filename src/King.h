@@ -20,6 +20,7 @@ public:
     }
 
     void printPiece() override;
+    void printPieceConsole() override;
     std::vector<Position> getLegalMoves(Board& board, std::vector<Position> validMoves, Position pos);
     std::vector<Position> doGetValidMoves(Board& board, Position pos, bool checkCastling) override;
     std::string identifyPiece() override;

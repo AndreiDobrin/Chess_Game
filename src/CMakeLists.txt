@@ -17,6 +17,10 @@ add_executable(${PROJECT_NAME}
         Knight.h
         Bishop.cpp
         Bishop.h
+        BishopMovement.cpp
+        BishopMovement.h
+        RookMovement.cpp
+        RookMovement.h
         Queen.cpp
         Queen.h
         GameDB.cpp
@@ -28,6 +32,7 @@ add_executable(${PROJECT_NAME}
         UI.h
         Window.h
         myRectangle.h
+        UI.cpp
 )
 target_sources(${PROJECT_NAME} PRIVATE main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE vendor)

@@ -6,6 +6,8 @@ add_subdirectory(SDL)
 add_subdirectory(SDL_image)
 
 set(SDLTTF_VENDORED ON CACHE BOOL "Use vendored third-party libraries" FORCE)
+set(SDLTTF_HARFBUZZ OFF CACHE BOOL "Disable harfbuzz" FORCE)
+set(SDLTTF_PLUTOSVG OFF CACHE BOOL "Disable plutosvg" FORCE)
 add_subdirectory(SDL_ttf)
 
 

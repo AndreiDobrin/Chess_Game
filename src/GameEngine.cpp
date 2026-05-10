@@ -1,6 +1,7 @@
 #include <cstring>
-
+#include <limits>
 #include "GameEngine.h"
+#include "GameDB.h"
 using namespace std;
 
     void GameEngine::expandCapacity() {
@@ -20,6 +21,12 @@ using namespace std;
         currentTurn = Color::WHITE;
         movesCapacity = 10;
         moveDurations = new float[movesCapacity];
+        strcpy(whitePlayer, "Guest");
+        strcpy(blackPlayer, "Guest");
+        whiteTimeLeft = 600.0f; // 10 minutes
+        blackTimeLeft = 600.0f;
+        currentMatchId = -1;
+        lastTick = std::chrono::steady_clock::now();
     }
 
     GameEngine::~GameEngine() {
@@ -30,10 +37,66 @@ using namespace std;
         this->moveHistory = other.moveHistory;
         this->movesCapacity = other.movesCapacity;
         this->moveDurations = new float[this->movesCapacity];
+        this->whiteTimeLeft = other.whiteTimeLeft;
+        this->blackTimeLeft = other.blackTimeLeft;
+        this->currentMatchId = other.currentMatchId;
+        this->lastTick = other.lastTick;
+        strcpy(this->whitePlayer, other.whitePlayer);
+        strcpy(this->blackPlayer, other.blackPlayer);
 
         for (int i = 0; i < this->movesCapacity; i++) {
             this->moveDurations[i] = other.moveDurations[i];
         }
+    }
+
+    void GameEngine::switchTurn() {
+        if (currentTurn == Color::WHITE) {
+            currentTurn = Color::BLACK;
+        }
+        else {
+            currentTurn = Color::WHITE;
+        }
+        lastTick = std::chrono::steady_clock::now();
+    }
+
+    void GameEngine::updateTimers() {
+        auto now = std::chrono::steady_clock::now();
+        float delta = std::chrono::duration<float>(now - lastTick).count();
+        lastTick = now;
+
+        if (currentTurn == Color::WHITE) {
+            whiteTimeLeft -= delta;
+            if (whiteTimeLeft < 0) whiteTimeLeft = 0;
+        } else {
+            blackTimeLeft -= delta;
+            if (blackTimeLeft < 0) blackTimeLeft = 0;
+        }
+    }
+
+    float GameEngine::getTimeLeft(Color color) const {
+        return (color == Color::WHITE) ? whiteTimeLeft : blackTimeLeft;
+    }
+
+    void GameEngine::setInitialTime(float minutes) {
+        whiteTimeLeft = minutes * 60.0f;
+        blackTimeLeft = minutes * 60.0f;
+    }
+
+    void GameEngine::startMatch(GameDB& db) {
+        currentMatchId = db.insertMatch(whitePlayer, blackPlayer);
+        lastTick = std::chrono::steady_clock::now();
+    }
+
+    long long GameEngine::getCurrentMatchId() const {
+        return currentMatchId;
+    }
+
+    void GameEngine::recordMove(char piece, bool capture, Position from, Position to, float duration) {
+        moveHistory.push_back(std::make_tuple(piece, capture, from, to));
+        if (moveHistory.size() >= movesCapacity) {
+            expandCapacity();
+        }
+        moveDurations[moveHistory.size() - 1] = duration;
     }
 
     bool GameEngine::playerMove(Board& board, std::chrono::steady_clock::time_point startTime) {
@@ -78,13 +141,9 @@ using namespace std;
                 expandCapacity();
             }
             moveDurations[moveHistory.size() - 1] = chrono::duration<float>(endTime - startTime).count();
-            if (currentTurn == Color::WHITE) {
-                currentTurn = Color::BLACK;
-            }
-            else {
 
-                currentTurn = Color::WHITE;
-            }
+            switchTurn();
+
             board.showChessBoard(from, to);
             return true;
         }
@@ -92,6 +151,15 @@ using namespace std;
         return false;
     }
 
+
+    void GameEngine::reset() {
+        currentTurn = Color::WHITE;
+        whiteTimeLeft = 600.0f;
+        blackTimeLeft = 600.0f;
+        moveHistory.clear();
+        currentMatchId = -1;
+        lastTick = std::chrono::steady_clock::now();
+    }
 
     Color GameEngine::getCurrentTurn() {
         return currentTurn;

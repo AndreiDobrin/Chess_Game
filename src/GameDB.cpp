@@ -150,28 +150,32 @@ long long GameDB::insertMatch(const char* whitePlayer, const char* blackPlayer) 
 
 void GameDB::insertWin(long long matchId, int result) {
     sqlite3_stmt* stmt = nullptr;
-    const char* sql = "UPDATE TABLE MATCHES"
-                      "SET RESULT = ?"
-                      "WHERE MATCH_ID = ?";
+    const char* sql = "UPDATE MATCHES SET RESULT = ? WHERE MATCH_ID = ?;";
     int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::cout << "Error inserting win in database\n";
+        std::cout << "Error preparing update in database: " << sqlite3_errmsg(db) << std::endl;
         return;
     }
     std::string resultText;
     switch (result) {
         case -1:
-            resultText = "1/2-1/2.";
+            resultText = "1/2-1/2";
+            break;
         case 0:
-            resultText = "1-0.";
+            resultText = "1-0";
+            break;
         case 1:
-            resultText = "0-1.";
+            resultText = "0-1";
+            break;
+        default:
+            resultText = "ABANDONED";
+            break;
     }
 
     if (sqlite3_bind_text(stmt, 1, resultText.c_str(), -1, SQLITE_TRANSIENT) != SQLITE_OK ||
-        sqlite3_bind_int64(stmt, 1, matchId) != SQLITE_OK
+        sqlite3_bind_int64(stmt, 2, matchId) != SQLITE_OK
         ) {
-        std::cout << "Failed to bind variables(line 1177): " << sqlite3_errmsg(db) << std::endl;
+        std::cout << "Failed to bind variables: " << sqlite3_errmsg(db) << std::endl;
         sqlite3_finalize(stmt);
         return;
         }
@@ -180,7 +184,7 @@ void GameDB::insertWin(long long matchId, int result) {
         sqlite3_finalize(stmt);
         return;
     }
-    std::cout << "Match result inserted in db successfully\n";
+    std::cout << "Match result inserted in db successfully: " << resultText << std::endl;
     sqlite3_finalize(stmt);
 }
 

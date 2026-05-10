@@ -6,14 +6,21 @@
 #include <memory>
 #include "Piece.h"
 
+// Cerinta 2: Clasa mica pentru a demonstra compunerea (has-a)
+class ComponentDemo {
+public:
+    ComponentDemo() { std::cout << "ComponentDemo (componenta) construita." << std::endl; }
+};
+
 
 class Board {
 
 private:
+    ComponentDemo compDemo; // Cerinta 2: Compunere (has-a)
     std::unique_ptr<Piece> grid[8][8];
 
-    Position lastMoveFrom = {-1, -1};
-    Position lastMoveTo = {-1, -1};
+    Position lastMoveFrom;
+    Position lastMoveTo;
 public:
     Board();
 
@@ -45,6 +52,7 @@ public:
 
     Position getLastMoveFrom() const;
     Position getLastMoveTo() const;
+    void replacePiece(Position pos, std::unique_ptr<Piece> piece);
     void drawChessBoard(SDL_Renderer* renderer, Position from, std::vector<Position> const& pos);
     void drawChessboard(SDL_Renderer* renderer, Board& board);
 };

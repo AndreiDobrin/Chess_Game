@@ -17,17 +17,18 @@ class Board;
 
 
 class Piece {
+private: // datele pot fi accesate doar din clasa piece. invalid daca am accesa direct `this->color` din bishop
     bool hasMoved; // for pawns' first move and for castling
     Color color;
     SDL_Texture* img;
-protected:
+protected: // derivatele pot accesa/suprascrie functiile astea. valid sa o apelam din derivata, invalid din main
     virtual std::vector<Position> doGetValidMoves(Board& board, Position pos, bool checkCastling) = 0;
 
 
-public:
-    Piece(Color c) : color(c), hasMoved(false) {} // constructor cu parametri
-    Piece(Color c, bool hasMoved) : color(c), hasMoved(hasMoved) {} // constructor cu toti parametrii
-    Piece() : color(Color::WHITE), hasMoved(false) {} // constructor fara parametri
+public: // public, oricine poate folosi functiile astea
+    Piece(Color c); // constructor cu parametri
+    Piece(Color c, bool hasMoved); // constructor cu toti parametrii
+    Piece(); // constructor fara parametri
     Piece(const Piece &other); // copy constructor
 
     virtual ~Piece(); // destructor
@@ -45,6 +46,7 @@ public:
     }
     virtual std::string identifyPiece() = 0;
     virtual void printPiece() = 0;
+    virtual void printPieceConsole() = 0; // Cerinta 3: A doua functie pur virtuala
 
     void setColor (Color newColor);
     void setHasMoved (bool newHasMoved);

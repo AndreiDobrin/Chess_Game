@@ -4,8 +4,23 @@
 #include <string>
 #include <vector>
 
-    Piece::Piece(const Piece &other) = default; // copy constructor
-    Piece::~Piece() = default; // destructor
+    Piece::Piece(Color c) : color(c), hasMoved(false) {
+        std::cout << "Piece constructor called for color " << (c == Color::WHITE ? "White" : "Black") << std::endl;
+    }
+    Piece::Piece(Color c, bool hasMoved) : color(c), hasMoved(hasMoved) {
+        std::cout << "Piece constructor (all parameters) called" << std::endl;
+    }
+    Piece::Piece() : color(Color::WHITE), hasMoved(false) {
+        std::cout << "Piece default constructor called" << std::endl;
+    }
+    Piece::Piece(const Piece &other) {
+        color = other.color;
+        hasMoved = other.hasMoved;
+        std::cout << "Piece copy constructor called" << std::endl;
+    }
+    Piece::~Piece() {
+        std::cout << "Piece destructor called" << std::endl;
+    }
 
     Piece& Piece::operator= (const Piece& other) { // supraincarcare operator atribuire '='
         if (this == &other) return *this;

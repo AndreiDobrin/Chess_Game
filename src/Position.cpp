@@ -1,6 +1,8 @@
 #include "Position.h"
 #include <iostream>
 
+Position::Position(int r, int c) : row(r), col(c) {
+}
 
 std::ostream& operator<< (std::ostream& os, const Position& pos) { // piece.position in loc de piece.position.col/piece.position.row
     os << "(" << pos.row << ", " << pos.col << ")";

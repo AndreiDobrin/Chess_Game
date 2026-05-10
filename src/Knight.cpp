@@ -14,6 +14,10 @@ void Knight::printPiece() {
         std::cout << "[ bN ]";
 }
 
+void Knight::printPieceConsole() {
+    printPiece();
+}
+
 std::vector<Position> Knight::doGetValidMoves(Board& board, Position pos, bool checkCastling) {
     std::vector<Position> validMoves;
 

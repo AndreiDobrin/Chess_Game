@@ -23,6 +23,7 @@ public:
     }
 
     void printPiece() override;
+    void printPieceConsole() override;
 
     std::vector<Position> doGetValidMoves(Board& board, Position pos, bool checkCastling) override;
     std::string identifyPiece() override;

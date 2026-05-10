@@ -15,6 +15,21 @@ void Pawn::printPiece() {
         std::cout << "[ bP ]";
     }
 }
+
+void Pawn::printPieceConsole() {
+    printPiece();
+}
+
+bool Pawn::canPromote(Position pos) {
+    if (this->getColor() == Color::WHITE && pos.row == 0) return true;
+    if (this->getColor() == Color::BLACK && pos.row == 7) return true;
+    return false;
+}
+
+void Pawn::promote() {
+    std::cout << "Pawn promotion triggered! (Ready for GUI selection)" << std::endl;
+}
+
 std::string Pawn::identifyPiece() {
     return "Pawn";
 }

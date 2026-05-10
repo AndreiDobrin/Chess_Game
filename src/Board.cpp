@@ -13,11 +13,21 @@
 
 
 
-    Board::Board() {
+    Board::Board() : compDemo(), lastMoveFrom(-1, -1), lastMoveTo(-1, -1) {
+        std::cout << "Board (gazda) construit dupa ComponentDemo." << std::endl;
         setupBoard();
     }
 
     void Board::setupBoard() {
+        // Clear board
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                grid[i][j] = nullptr;
+            }
+        }
+        lastMoveFrom = {-1, -1};
+        lastMoveTo = {-1, -1};
+
         grid[0][4] = std::make_unique<King>(Color::BLACK);
         grid[7][4] = std::make_unique<King>(Color::WHITE);
         grid[0][0] = std::make_unique<Rook>(Color::BLACK);
@@ -295,13 +305,23 @@ bool Board::isCheckedAfterMove(Position from, Position to, Color currentTurn) {
     Position Board::getLastMoveFrom() const { return lastMoveFrom; }
     Position Board::getLastMoveTo() const { return lastMoveTo; }
 
+    void Board::replacePiece(Position pos, std::unique_ptr<Piece> piece) {
+        if (pos.row >= 0 && pos.row < 8 && pos.col >= 0 && pos.col < 8) {
+            grid[pos.row][pos.col] = std::move(piece);
+        }
+    }
+
 
 void Board::drawChessBoard(SDL_Renderer* renderer, Position from, std::vector<Position> const& pos) {
         SDL_FRect rect = {xOffset, yOffset, 50.0f, 50.0f};
+        SDL_FRect rectValid = {xOffset, yOffset, 50.0f/3, 50.0f/3};
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
+                bool ok = false;
                 rect.x = xOffset + 50.0f * j;
                 rect.y = yOffset + 50.0f * i;
+                rectValid.x = rect.x + 100.0f/6;
+                rectValid.y = rect.y + 100.0f/6;
                     if ((i + j) % 2 == 0) {
                         SDL_SetRenderDrawColor(renderer, 90, 56, 47, 255);
                     }
@@ -310,19 +330,23 @@ void Board::drawChessBoard(SDL_Renderer* renderer, Position from, std::vector<Po
                     }
 
                     if (from.col == j && from.row == i) {
-                        SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
+                        SDL_SetRenderDrawColor(renderer, 150, 150, 150, 150);
                     }
                     //valid moves for selected piece
                     else {
                         for (int k = 0; k < pos.size(); k++) {
                             if (j == pos[k].col && i == pos[k].row) {
-                                SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
+                                ok = true;
                             }
                         }
                     }
                 SDL_RenderFillRect(renderer, &rect);
                 if (this->getPositionInfo({i,j}) != nullptr) {
                     SDL_RenderTexture(renderer, this->getPositionInfo({i,j})->getImg(), nullptr, &rect);
+                }
+                if (ok) {
+                    SDL_SetRenderDrawColor(renderer, 150, 150, 150, 200);
+                    SDL_RenderFillRect(renderer, &rectValid);
                 }
             }
         }

@@ -16,6 +16,10 @@ void King::printPiece() {
         }
     }
 
+void King::printPieceConsole() {
+    printPiece();
+}
+
 // std::vector<Position> King::getLegalMoves(Board& board, std::vector<Position> validMoves, Position pos) {
 //
 // }

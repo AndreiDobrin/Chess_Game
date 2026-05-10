@@ -19,6 +19,8 @@
 #include "Board.h"
 #include "Rook.h"
 #include "Knight.h"
+#include "Bishop.h"
+#include "Queen.h"
 #include "GameDB.h"
 #include "GameEngine.h"
 #include "UI.h"
@@ -26,8 +28,7 @@
 #include "SDL3/SDL.h"
 #include "SDL3_image/SDL_image.h"
 #include "SDL3_ttf/SDL_ttf.h"
-
-
+#include "UI.h"
 
 
 class Board;
@@ -105,41 +106,15 @@ std::ostream& operator<< (std::ostream& os, const std::vector<std::tuple<char, b
 //
 // }
 
-bool buttonClicked(SDL_FRect button, float mouseX, float mouseY) {
-    if (mouseX >= button.x && mouseX <= (button.x + button.w) &&
-                    mouseY >= button.y && mouseY <= (button.y + button.h)) {
-        return true;
-    }
 
 
-    return false;
-}
+
 
 vector<vector<tuple<float, float>>> chessboardGrid;
 
 void initChessboard() {
 
-    float xOffset = (float(kScreenWidth) - 50.0f*8)/2;
-    float yOffset = (float(kScreenHeight) - 50.0f*8)/2;
 
-    SDL_FRect rect = {xOffset, yOffset, 50.0f, 50.0f};
-    for (int i = 0; i < 8; i++) {
-        vector<tuple<float, float>> chessLine;
-        for (int j = 0; j < 8; j++) {
-            rect.x = xOffset + 50.0f * float(j);
-            rect.y = yOffset + 50.0f * float(i);
-            // cout << rect.x << endl << rect.y;
-            chessLine.push_back(make_tuple(rect.x, rect.y));
-        }
-        chessboardGrid.push_back(chessLine);
-    }
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            cout << "["<< i << "][" << j << "]: "<<get<0>(chessboardGrid[i][j]) << " " << get<1>(chessboardGrid[i][j]) << endl;
-        }
-    }
-    // << get<0>(chessboardGrid[0][0]) << " " << get<1>(chessboardGrid[0][0]) << endl;
-    //cout << get<0>(chessboardGrid[7][7]) << " " << get<1>(chessboardGrid[7][7]) << endl;
 }
 
 float xOffset = (float(kScreenWidth) - 50.0f*8)/2;
@@ -183,69 +158,28 @@ int main() {
     //GameDB database;
 
 
-    // 1. Initialize SDL Video Subsystem
-    // In SDL3, functions return a boolean (false on failure)
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
-        std::cerr << "SDL could not initialize! Error: " << SDL_GetError() << std::endl;
-        return 1;
-    }
-
-    // 2. Initialize the TTF Engine
-    if (TTF_Init() == -1) {
-        cerr << "TTF could not initialize! Error: " << SDL_GetError() << endl;
-        SDL_Quit();
-        return 1;
-    }
-
-    // 2. Create Window
-    if (!window) {
-        std::cerr << "Window could not be created! Error: " << SDL_GetError() << std::endl;
-        SDL_Quit();
-        return 1;
-    }
-
-    // 3. Create Renderer
-    // NULL tells SDL to pick the best graphics driver automatically
-    if (!renderer) {
-        std::cerr << "Renderer could not be created! Error: " << SDL_GetError() << std::endl;
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
-    }
-
-    // 4. Load the Font (Make sure arial.ttf is in the same folder as your .exe)
-    TTF_Font* font = TTF_OpenFont("arial.ttf", 28);
-    if (!font) {
-        cerr << "Failed to load font! Did you put arial.ttf in the right folder? Error: " << SDL_GetError() << endl;
-    }
-
-    SDL_Cursor* handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_POINTER);
-
-    SDL_Cursor* defaultCursor = SDL_GetDefaultCursor();
 
     // 4. Main Event Loop
     bool isRunning = true;
     SDL_Event event;
 
-    // BUTTON AREA
-    float menuButtonW = 200;
-    float menuButtonH = 50;
-    // BUTTON TEXT COLOR
-    SDL_Color textColor = { 0, 0, 0, 255 }; // Black text
-    SDL_FRect playButton = { (kScreenWidth - menuButtonW) / 2.0f, (kScreenHeight - menuButtonH) / 2.0f - 100, menuButtonW, menuButtonH };
 
-    SDL_Surface* textSurface = TTF_RenderText_Blended(font, "Play", 4, textColor);
-    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
-    SDL_DestroySurface(textSurface); // We don't need the surface anymore
-
-    // 7. Center the Text inside the Button
-    SDL_FRect textRect;
-    float textW, textH;
-    SDL_GetTextureSize(textTexture, &textW, &textH);
-    textRect.w = textW;
-    textRect.h = textH;
-    textRect.x = playButton.x + (playButton.w - textW) / 2.0f; // Center X
-    textRect.y = playButton.y + (playButton.h - textH) / 2.0f; // Center Y
+    // // BUTTON TEXT COLOR
+    // SDL_Color textColor = { 0, 0, 0, 255 }; // Black text
+    // SDL_FRect playButton = { (kScreenWidth - menuButtonW) / 2.0f, (kScreenHeight - menuButtonH) / 2.0f - 100, menuButtonW, menuButtonH };
+    //
+    // SDL_Surface* textSurface = TTF_RenderText_Blended(font, "Play", 4, textColor);
+    // SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+    // SDL_DestroySurface(textSurface); // We don't need the surface anymore
+    //
+    // // 7. Center the Text inside the Button
+    // SDL_FRect textRect;
+    // float textW, textH;
+    // SDL_GetTextureSize(textTexture, &textW, &textH);
+    // textRect.w = textW;
+    // textRect.h = textH;
+    // textRect.x = playButton.x + (playButton.w - textW) / 2.0f; // Center X
+    // textRect.y = playButton.y + (playButton.h - textH) / 2.0f; // Center Y
 
     float mouseX = -1;
     float mouseY = -1;
@@ -255,189 +189,37 @@ int main() {
     Board chessboard;
     int i = 0;
     int j = 0;
+    int m = 0;
+    int n = 0;
     vector<Position> wantedValidPositions;
     Position pieceSelected = {-1, -1};
     GameEngine engine;
+    UI ui;
+    ui.Init();
 
-    while (isRunning) {
+    // cerinta 5
+    std::cout << "--- demo cerinta 5 ---" << std::endl;
+    Piece* p = new Queen(Color::WHITE);
+    delete p;
+    std::cout << "----------------------" << std::endl;
+
+    while (state != -1) {
+
+        // MENU
         if (state == 0) {
-            bool buttonHovered = false;
-
-            // CHECK FOR USER INPUT
-            while (SDL_PollEvent(&event)) {
-                // SDL_EVENT_QUIT means the user clicked the 'X' button on the window
-                if (event.type == SDL_EVENT_QUIT) {
-                    isRunning = false;
-                }
-
-                // MEMORISE MOUSE POSITIONS FOR HOVER
-                if (event.type == SDL_EVENT_MOUSE_MOTION) {
-                    mouseX = event.motion.x;
-                    mouseY = event.motion.y;
-                }
-
-                // CHECK FOR CLICKS
-                if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-                    // float mouseX = event.button.x;
-                    // float mouseY = event.button.y;
-
-                    // PLAY BUTTON CLICK
-                    if (buttonClicked(playButton, mouseX, mouseY)) {
-                        cout << "Play Button was clicked!" << endl;
-                        // START GAME
-                        bool gameInit = false;
-                        state = 1;
-                    }
-                    cout << mouseX << " " << mouseY << endl;
-                }
-            }
-
-            if (mouseX >= playButton.x && mouseX <= (playButton.x + playButton.w) &&
-                mouseY >= playButton.y && mouseY <= (playButton.y + playButton.h)) {
-
-                buttonHovered = true;
-                }
-
-            // 5. Drawing
-            // Set the background color to a nice blue (Red, Green, Blue, Alpha)
-            SDL_SetRenderDrawColor(renderer, 0, 100, 200, 255);
-            SDL_RenderClear(renderer); // Wipe the screen with the blue color
-
-            // DRAW BUTTON
-            if (buttonHovered) {
-                SDL_SetCursor(handCursor);
-                SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
-            }
-            else {
-                SDL_SetCursor(defaultCursor);
-                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            }
-            SDL_RenderFillRect(renderer, &playButton);
-            SDL_RenderTexture(renderer, textTexture, nullptr, &textRect);
-
-
-
-            // Show what we've drawn on the screen
-            SDL_RenderPresent(renderer);
+            state = ui.Menu();
         }
 
         // PLAY LOGIC
         else if (state == 1) {
-            if (!gameInit) {
-                gameInit = true;
-                initChessboard();
-                chessboard.setupBoard();
-            }
+            state = ui.Game(chessboard, engine, gameInit, pieceSelected, i, j, wantedValidPositions, m, n);
+        }
 
-            // RESET CURSOR
-            SDL_SetCursor(defaultCursor);
-
-            // CHECK FOR USER INPUT
-            while (SDL_PollEvent(&event)) {
-                // SDL_EVENT_QUIT means the user clicked the 'X' button on the window
-                if (event.type == SDL_EVENT_QUIT) {
-                    isRunning = false;
-                }
-
-                // MEMORISE MOUSE POSITIONS FOR HOVER
-                if (event.type == SDL_EVENT_MOUSE_MOTION) {
-                    mouseX = event.motion.x;
-                    mouseY = event.motion.y;
-
-                }
-                // CHECK FOR CLICKS
-                if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-                    // float mouseX = event.button.x;
-                    // float mouseY = event.button.y;
-
-                    // CLICKED ON GRID
-                    if (mouseX >= get<0>(chessboardGrid[0][0]) && mouseY >= get<1>(chessboardGrid[0][0]) &&
-                        mouseX <= get<0>(chessboardGrid[7][7]) + 50 && mouseY <= get<1>(chessboardGrid[7][7]) + 50) {
-                        i = (mouseY - yOffset) / 50;
-                        j = (mouseX - xOffset) / 50;
-                        cout << "Chessboard Grid clicked: " << i << " " << j << endl;
-
-                        // PIECE ALREADY SELECTED
-                        if (pieceSelected.col != -1 && pieceSelected.row != -1) {
-                            for (int k = 0; k <= wantedValidPositions.size(); k++) {
-                                cout << wantedValidPositions[k] << " ";
-                                if (j == wantedValidPositions[k].col &&
-                                    i == wantedValidPositions[k].row) {
-                                    cout << "VALID\n";
-                                    cout<<chessboard.movePiece(pieceSelected, {i, j}, engine.getCurrentTurn());
-                                    break;
-                                    }
-                            }
-                            pieceSelected = {-1, -1};
-                            i = -1;
-                            j = -1;
-                        }
-                        // PIECE NOT SELECTED
-                        else {
-
-                            //
-                            if (chessboard.getPositionInfo({i,j}) != nullptr) {
-                            pieceSelected = {i, j};
-                            wantedValidPositions = chessboard.getPositionInfo({i,j})->getValidMoves(chessboard, {i,j});
-                            // for (int k = 0; k < wantedValidPositions.size(); k++) {
-                            //     cout << wantedValidPositions[k] << endl;
-                            // }
-                            }
-                            else {
-                                pieceSelected = {-1, -1};
-                            }
-                            cout << "Piece selected: " << pieceSelected << endl;
-                        }
-                    }
-
-
-                    // // BACK BUTTON CLICK
-                    // if (buttonClicked(backButton, mouseX, mouseY)) {
-                    //     cout << "Back Button was clicked!" << endl;
-                    //     // BACK TO MENU
-                    //     state = 0;
-                    // }
-                    cout << mouseX << " " << mouseY << endl;
-                }
-            }
-
-
-
-            // Set the background color to a nice blue (Red, Green, Blue, Alpha)
-            SDL_SetRenderDrawColor(renderer, 0, 100, 200, 255);
-            SDL_RenderClear(renderer); // Wipe the screen with the blue color
-
-            //initChessboard();
-            if (pieceSelected.col != -1 && pieceSelected.row != -1) {
-                chessboard.drawChessBoard(renderer, {i,j}, wantedValidPositions);
-            }
-            else {
-                chessboard.drawChessboard(renderer, chessboard);
-            }
-
-            if (mouseX >= get<0>(chessboardGrid[0][0]) && mouseY >= get<1>(chessboardGrid[0][0]) &&
-                mouseX <= get<0>(chessboardGrid[7][7])+ 50 && mouseY <= get<1>(chessboardGrid[7][7]) + 50) {
-
-                SDL_SetCursor(handCursor);
-            }
-            else {
-                SDL_SetCursor(defaultCursor);
-            }
-
-
-            SDL_RenderPresent(renderer);
+        // HISTORY LOGIC
+        else if (state == 2) {
+            state = ui.History();
         }
     }
-
-    // 6. Cleanup (Always clean up your pointers!)
-
-    SDL_DestroyTexture(textTexture);
-    TTF_CloseFont(font);
-    TTF_Quit(); // Quit TTF
-
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
 
     return 0;
 }
