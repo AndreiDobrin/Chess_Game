@@ -29,7 +29,7 @@ bool UI::Init() {
     }
 
     // 2. Initialize the TTF Engine
-    if (TTF_Init() == -1) {
+    if (!TTF_Init()) {
         cerr << "TTF could not initialize! Error: " << SDL_GetError() << endl;
         SDL_Quit();
         return false;
