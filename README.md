@@ -22,10 +22,10 @@ Alege una dintre cele două modalități de mai jos pentru a obține proiectul:
 
 ### Varianta A: Clonare de pe GitHub (Recomandat)
 
-Deschide un terminal și rulează comanda de mai jos. Este **critic** să folosești parametrul `--recursive` pentru a descărca și bibliotecile externe (SDL3, SQLite etc.):
+Deschide un terminal și rulează comanda de mai jos. Este **critic** să folosești parametrul `--recursive` pentru a descărca și bibliotecile externe (SDL3, SQLite etc.) și să specifici branch-ul `gui`:
 
 ```bash
-git clone --recursive https://github.com/AndreiDobrin/Chess_Game.git
+git clone -b gui --recursive https://github.com/AndreiDobrin/Chess_Game.git
 cd Chess_Game
 ```
 
